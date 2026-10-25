@@ -1,6 +1,6 @@
 # The PSP OS (XMB clone)
 
-The portfolio is a single page showing a 3D PSP. Its screen runs a small recreation of the PSP's XrossMediaBar (XMB) menu. Visitors browse **Projects, Memories, About and Contact** on it, and can pick a colour theme under **Settings**, with the keyboard, by tapping the screen, or by clicking the PSP's own buttons.
+The portfolio is a single page showing a 3D PSP. Its screen runs a small recreation of the PSP's XrossMediaBar (XMB) menu. Visitors browse **Projects, Games, Memories, About and Contact** on it, and can pick a colour theme under **Settings**, with the keyboard, by tapping the screen, or by clicking the PSP's own buttons.
 
 This document explains where the OS lives, how a frame reaches the screen, and how to change it.
 
@@ -141,7 +141,7 @@ const FILL_WIDTH=.9, FILL_HEIGHT=.72, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 - **Free area**: `stageInsets()` in `src/layout.js` reserves a strip of the page for the wheel. The PSP is framed in the rest.
   - **Wide screens (760 px and up)**: the strip is on the left, 36% of the width up to 520 px.
   - **Narrow screens**: the strip is everything above a band just tall enough for the PSP.
-- **View offset**: the WebGL canvas still covers the whole page. `camera.setViewOffset(w, h, -left/2, -top/2, w, h)` slides the picture so the PSP is centred in the free area. Raycasting takes the offset into account automatically, because it is part of the projection matrix. The background dots also centre their fade on the free area.
+- **View offset**: the WebGL canvas still covers the whole page. `camera.setViewOffset(w, h, -left/2, -top/2, w, h)` slides the picture so the PSP is centred in the free area. Raycasting takes the offset into account automatically, because it is part of the projection matrix.
 - **`resetView()`**: places the camera so the PSP spans `FILL_WIDTH` of the free area's width, capped so it never takes more than `FILL_HEIGHT` of its height. Raise these values to make the PSP bigger.
 - **`ROTATION_LOCKED`**: free rotation is currently **off**. This one flag:
   - disables OrbitControls rotation (`enableRotate`)
@@ -187,6 +187,15 @@ Pressing a mapped key also animates the matching PSP button.
   - The glow is static at 0.4 opacity and rises to 0.95 on hover. `input.js` reports the hovered button through `onHoverButton`, and the scene re-renders only then.
   - The cost is seven extra quads and no post-processing.
 - **Orbit conflict**: the pointerdown listener runs in the **capture** phase. When it hits the screen or a button, it sets `controls.enabled = false` for that gesture, before OrbitControls sees the event. This only matters when rotation is unlocked.
+
+## Saved effects (`src/effects/`)
+
+The page background is a plain near-black gradient (`.memories-stage` in `styles.css`). There is no animation on it.
+
+`src/effects/pulseBackground.js` is a **saved, currently unused** effect kept for a later feature. It draws soft shockwaves on a 2D canvas: a glow, two expanding rings and drifting sparks, about 1.4 s each, in a given colour. It only animates while a pulse is alive and does nothing with reduced motion.
+
+- **What's still wired**: `act(action, origin)` in `MemoriesScene.jsx` already receives the world point each action came from. `input.js` passes the button or screen point, and `input.origin(type)` gives one for keys.
+- **Re-enabling it** takes three steps, listed in the comment at the top of the file: add the canvas, create and resize the effect, and call `emit()` from `act`.
 
 ## Page wheel (`PageWheel.jsx`)
 

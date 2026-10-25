@@ -12,12 +12,10 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .reset-view:hover, .light-toggle:hover { background: #536250; }
 .scene-status { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #cdbb95; display: grid; place-items: center; width: 52px; height: 52px; }
 .retry { border: 1px solid #d7ceb433; border-radius: 50%; background: #20372bd9; }
-.memories-stage{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 43%,#29292e 0%,#111114 50%,#080809 100%);overflow:hidden}
-.memories-stage>canvas:not(.memory-dots){position:absolute;inset:0;z-index:2;cursor:grab;touch-action:pan-y}
+.memories-stage{position:absolute;inset:0;background:radial-gradient(ellipse at 62% 48%,#111113 0%,#070708 55%,#020202 100%);overflow:hidden}
+.memories-stage>canvas{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:pan-y}
 .memories-stage>canvas:active{cursor:grabbing}
 .memories-stage>canvas:focus-visible{outline:1px solid #ddd;outline-offset:-8px}
-.memories-stage .memory-dots{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
-.memory-slash{position:absolute;left:-10%;bottom:8%;width:120%;height:12%;transform:rotate(-12deg);background:#ffffff05;border-top:1px solid #ffffff0b;border-bottom:1px solid #ffffff0b}
 .loading-screen{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:#303b33;color:#c7b58f;cursor:wait}
 .loading-screen svg{width:86px;height:158px;overflow:visible}
 .loading-outline{fill:none;stroke:#c7b58f;stroke-width:1.4}
@@ -32,7 +30,7 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .light-slider-layout input{writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;margin:0;accent-color:#d8a76d;cursor:pointer;touch-action:none}
 .light-stop-labels{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#b9c5b5;font-size:12px}
 .light-stop-labels span{height:18px;display:flex;align-items:center}
-.memories-stage.rotation-locked>canvas:not(.memory-dots),.memories-stage.rotation-locked>canvas:active{cursor:default}
+.memories-stage.rotation-locked>canvas,.memories-stage.rotation-locked>canvas:active{cursor:default}
 .page.rotation-locked .light-toggle{bottom:26px}
 .page.rotation-locked .light-panel{bottom:76px}
 /* Page wheel: Persona 5–style half wheel on the left (above the PSP on narrow screens). Sizes come from --r and --font. */

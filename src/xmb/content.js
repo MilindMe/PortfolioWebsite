@@ -6,17 +6,26 @@ import {themes} from './themes';
 // Settings is generated from themes.js; its items carry theme and apply it on confirm.
 export const categories = [
  {
-  id:'projects', label:'Projects', icon:'game',
+  id:'projects', label:'Projects', icon:'code',
   items:[
    {id:'portfolio', label:'PSP Portfolio', sub:'React · three.js', icon:'code',
     detail:{title:'PSP Portfolio', body:'This site. A PSP model rendered with three.js whose screen runs a recreation of the XMB, drawn into a canvas texture and driven by keyboard, touch and the PSP\'s own buttons.\n\nStack: React 19, Vite, three.js, Canvas 2D.',
-     links:[{label:'Source', url:'https://github.com/MilindTextNow'}]}},
+     links:[{label:'Source', url:'https://github.com/MilindMe'}]}},
    {id:'project-two', label:'Project Two', sub:'Replace with a real project', icon:'code',
     detail:{title:'Project Two', body:'Describe the problem, what you built and what you learned. Keep paragraphs short; the PSP screen is small and scrolls with ↑ ↓.',
      links:[{label:'GitHub', url:'https://github.com/'}, {label:'Live demo', url:'https://example.com/'}]}},
    {id:'project-three', label:'Project Three', sub:'Replace with a real project', icon:'code',
     detail:{title:'Project Three', body:'Another project write-up. Mention the stack, your role and any numbers that show impact.',
      links:[{label:'GitHub', url:'https://github.com/'}]}},
+  ],
+ },
+ {
+  id:'games', label:'Games', icon:'game',
+  items:[
+   {id:'doom', label:'DOOM', sub:'Coming soon', icon:'game',
+    detail:{title:'DOOM', body:'The 1993 classic, running in the browser through WebAssembly and drawn straight onto this PSP\'s screen.\n\nComing soon.'}},
+   {id:'mini-games', label:'Mini games', sub:'Coming soon', icon:'game',
+    detail:{title:'Mini games', body:'Small games built for the PSP screen, playable with the keyboard or the PSP\'s own buttons.\n\nComing soon.'}},
   ],
  },
  {
