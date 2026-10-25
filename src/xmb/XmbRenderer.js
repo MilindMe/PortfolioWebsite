@@ -5,8 +5,8 @@ import {itemSub} from './state';
 import {themeColors} from './themes';
 
 // The XMB is laid out in PSP-sized logical units and drawn at 2× into a canvas that textures the screen mesh.
-// Each frame stacks three layers: the soft backdrop (redrawn every frame at 1×), the menu (cached at 2×, redrawn
-// only when something changed) and the pulsing focus highlight (a few draws on top).
+// Cache the menu and page overlay separately so animated menu labels stay beneath the incoming page.
+// The soft backdrop redraws at 1×; cached text stays at 2× and pulses animate between the appropriate layers.
 export const SCREEN_W=480, SCREEN_H=270;
 // ~30 fps while the visitor is active or something is easing, ~12 fps for the idle waves.
 const ACTIVE_FRAME=32, IDLE_FRAME=80, ACTIVE_FOR=4000;
@@ -41,9 +41,9 @@ function wrap(ctx,text,width){
 export class XmbRenderer{
  constructor(reducedMotion){
   const layer=(width,height)=>{const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;return canvas.getContext('2d');};
-  // out is the texture; ctx is the cached menu layer every drawing helper uses; backdrop holds the waves.
+  // out is the texture; ctx targets the cached menu or overlay while helpers draw; backdrop holds the waves.
   this.out=layer(SCREEN_W*SCALE,SCREEN_H*SCALE);this.canvas=this.out.canvas;
-  this.ctx=layer(SCREEN_W*SCALE,SCREEN_H*SCALE);this.backdrop=layer(SCREEN_W,SCREEN_H);
+  this.ctx=layer(SCREEN_W*SCALE,SCREEN_H*SCALE);this.overlay=layer(SCREEN_W*SCALE,SCREEN_H*SCALE);this.backdrop=layer(SCREEN_W,SCREEN_H);
   this.texture=new THREE.CanvasTexture(this.canvas);
   this.texture.colorSpace=THREE.SRGBColorSpace;
   // The texture is re-uploaded every frame and shown at about its own size, so mipmaps would cost more than they give.
@@ -97,9 +97,11 @@ export class XmbRenderer{
   if(minute!==this.minute){this.minute=minute;this.dirty=true;}
   const booted=this.bootAt===null?0:instant?Infinity:(now-this.bootAt)/1000;
   if(booted<1.4)moving=true;
+  // The frame that snaps to the target must replace the last eased cache too.
+  const changed=this.dirty||moving||this.moving;
   this.moving=moving;
-  if(instant&&!moving&&!this.dirty)return false;
-  this.draw(instant?8:now/1000,booted,this.dirty||moving);
+  if(instant&&!changed)return false;
+  this.draw(instant?8:now/1000,booted,changed);
   this.dirty=false;this.texture.needsUpdate=true;
   return true;
  }
@@ -123,25 +125,35 @@ export class XmbRenderer{
   if(changed)this.foreground(booted);
   out.drawImage(this.ctx.canvas,0,0,SCREEN_W,SCREEN_H);
   this.pulse(t);
+  if(this.shown.detail>0||this.shown.photo>0)out.drawImage(this.overlay.canvas,0,0,SCREEN_W,SCREEN_H);
+  this.pulse(t,true);
  }
  // Everything with blurred shadows: drawn into the cached layer, along with the hit areas.
  foreground(booted){
   const ctx=this.ctx, state=this.state, shown=this.shown;
-  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  ctx.setTransform(SCALE,0,0,SCALE,0,0);
-  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  const clear=layer=>{
+   layer.setTransform(1,0,0,1,0,0);layer.clearRect(0,0,layer.canvas.width,layer.canvas.height);
+   layer.setTransform(SCALE,0,0,SCALE,0,0);
+   layer.globalAlpha=1;layer.globalCompositeOperation='source-over';
+  };
+  clear(ctx);clear(this.overlay);
   this.hits=[];this.pulses=[];
   const menu=clamp01((booted-.7)/.6), overlay=Math.max(shown.detail,shown.photo);
   this.status(menu);
   this.menu(menu*(1-overlay),state.view==='menu');
-  if(shown.detail>0)this.detail(shown.detail*menu,state.view==='detail');
-  if(shown.photo>0)this.photoView(shown.photo*menu,state.view==='photo');
+  // Page backgrounds and text must cover the outgoing menu's animated label.
+  this.ctx=this.overlay;
+  try{
+   if(shown.detail>0)this.detail(shown.detail*menu,state.view==='detail');
+   if(shown.photo>0)this.photoView(shown.photo*menu,state.view==='photo');
+  }finally{this.ctx=ctx;}
  }
  // The focused item's label and the selected link glow in time; foreground() leaves them out and records them here.
- pulse(t){
+ pulse(t,links=false){
   const ctx=this.out, beat=Math.sin(t*3.2);
   ctx.textAlign='left';ctx.textBaseline='middle';ctx.shadowOffsetX=ctx.shadowOffsetY=0;
   for(const p of this.pulses){
+   if(!!p.link!==links)continue;
    ctx.globalAlpha=p.alpha;
    if(p.link){
     ctx.beginPath();ctx.roundRect(p.x,p.y-10,p.width,20,10);

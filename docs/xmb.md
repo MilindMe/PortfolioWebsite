@@ -81,11 +81,15 @@ The reducer is pure and has no DOM access. Side effects such as opening links li
 
 ### Layers, drawn in order each frame
 
-Each frame stacks three canvases into the texture canvas (`out`):
+Each frame composites cached layers and animated highlights into the texture canvas (`out`), in this order:
 
 - **Backdrop** (`this.backdrop`, 480×270, 1×): item 1 below, redrawn every frame and scaled up. The waves are soft, so a quarter of the pixels looks the same.
-- **Foreground** (`this.ctx`, 960×540): items 2–5, everything with blurred shadows. It is cached and redrawn only while something is dirty or easing, so on an idle frame it costs one `drawImage`. Every drawing helper uses `this.ctx`, so new views land in the cache automatically. Hit boxes are rebuilt with it.
-- **Pulse** (`pulse()`): the glowing focused label and the selected link pill, which change every frame. `foreground()` skips drawing them and pushes them to `this.pulses` instead.
+- **Menu** (`this.ctx`, 960×540): status, categories and items, excluding the pulsing focus label. Cached until dirty or easing.
+- **Menu pulse** (`pulse(t)`): the glowing focused label, composited before any page overlay so it fades beneath the incoming page.
+- **Page overlay** (`this.overlay`, 960×540): the detail/photo background and text, cached with the menu. Drawing helpers temporarily target this context. This costs one additional 2D canvas; the extra composite is skipped while only the menu is visible.
+- **Link pulse** (`pulse(t, true)`): the selected detail link pill, drawn above its page.
+
+`foreground()` refreshes both caches and their hit boxes. The exact final frame is also cached when easing snaps to its target, so outgoing text and hit areas cannot remain in the last intermediate state. Idle frames continue to reuse the caches.
 
 
 1. **Background**: a vertical gradient in the current theme's colours (cross-faded when the theme changes), a soft top-left glow, and four sine "ribbons" (`waves`) blended with `'lighter'`.
