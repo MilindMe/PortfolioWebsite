@@ -37,12 +37,28 @@ See [`docs/xmb.md`](docs/xmb.md) for how the PSP OS works and where everything l
 ## Files
 
 - `src/App.jsx`: page shell, controls and XMB state.
-- `src/MemoriesScene.jsx`: Three.js scene; remaps the `screen_low` mesh to show the XMB canvas.
+- `src/MemoriesScene.jsx`: Three.js scene; textures the `screen_low` mesh to show the XMB canvas.
 - `src/xmb/XmbRenderer.js`: draws the XMB (backdrop waves, status bar, menu, detail and photo views) into the screen texture.
 - `src/xmb/state.js`: navigation reducer. `src/xmb/input.js`: keyboard, screen gestures and PSP buttons.
 - `src/xmb/XmbA11y.jsx`: hidden copy of the content for screen readers and search engines.
 - `src/xmb/icons.js`: Lucide icon outlines drawn on the canvas.
 - `src/lighting.js`: original lighting presets.
-- `assets-src/psp.glb`: the PSP model as exported from Blender. `npm run model:optimize` compresses it into `public/models/psp-v2.glb`, the file the site loads (see "The model pipeline" in `docs/xmb.md`).
+- `assets-src/psp.glb`: the untouched PSP source. `npm run model:optimize` runs Blender cleanup and KTX2/meshopt compression into `public/models/psp-v3.glb`, the file the site loads (see "The model pipeline" in `docs/xmb.md`).
 
 The music shop’s other pages, navigation, and audio player are excluded from this starting point.
+
+## Model optimization
+
+Install Blender (validated with 5.2.2) and [KTX-Software 4.4+](https://github.com/KhronosGroup/KTX-Software/releases), with `ktx` on PATH. Set `BLENDER_BIN` if Blender is not on PATH or in its usual macOS application location. These tools are required only to regenerate the asset; normal website builds use the committed GLB.
+
+```sh
+npm ci
+npm run model:optimize
+npm run model:check
+npm test
+npm run build
+```
+
+The cleanup preserves the source file and all interactive mesh names, reduces 58,200 triangles to 39,980, joins the static body, recalculates normals, enables backface culling, and bakes the screen UVs. The shipped model has 9 meshes, weighs 563 KB (467 KB gzip), and uses four KTX2 textures with about 2.6 MB estimated minimum GPU allocation. The previous JPEG model was 651 KB (410 KB gzip); KTX2 also needs a one-time Basis transcoder download, trading additional cold-load bytes for much lower GPU memory and fewer draw calls.
+
+The shell starts one shared model fetch alongside the lazy scene import. This avoids duplicate HTML fetch preloads in WebKit. See [`docs/perf-followups.md`](docs/perf-followups.md) for browser validation and remaining physical-device checks.

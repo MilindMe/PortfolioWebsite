@@ -9,11 +9,11 @@ import {XmbRenderer} from './xmb/XmbRenderer';
 import {attachScreenInput, keyAction} from './xmb/input';
 import {createButtonGlow} from './xmb/buttonGlow';
 import {ROTATION_LOCKED, stageInsets} from './layout';
+import {MODEL_URL, loadModelBytes} from './modelAsset';
 
-// Fraction of the free area (the viewport minus the page wheel's strip) the PSP spans, capped so it never overflows vertically.
 // Built by `npm run model:optimize` (meshopt geometry, KTX2 textures). Vite bundles the Basis transcoder that
 // KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
-const MODEL_URL='/models/psp-v2.glb';
+// Fraction of the free area the PSP spans, capped so it never overflows vertically.
 const FILL_WIDTH=.9, FILL_HEIGHT=.72, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 
 export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAction,onStatus,onProgress}) {
@@ -80,22 +80,21 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAc
   addEventListener('keydown',key);renderer.domElement.addEventListener('webglcontextlost',lost);
   controls.addEventListener('change',render);api.current={reset:resetView,lighting:mode=>{applyLighting(mode,'memories',lightRig);render();},xmb:state=>xmb.setState(state)};
   function disposeModel(root){root.traverse(o=>{o.geometry?.dispose();for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){for(const value of Object.values(m))if(value?.isTexture)value.dispose();m.dispose();}});}
-  // Progress by bytes; when the response is compressed and has no length, fall back to per-file progress.
-  const manager=new THREE.LoadingManager();manager.onProgress=(_url,loaded,total)=>{if(!disposed)onProgress?.(loaded/total);};
-  const bytes=e=>{if(!disposed&&e.lengthComputable&&e.total)onProgress?.(e.loaded/e.total);};
-  // index.html preloads this file; keep the two paths in sync.
+  const manager=new THREE.LoadingManager();
   const ktx2=new KTX2Loader(manager).detectSupport(renderer);
-  new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2).load(MODEL_URL,gltf=>{
+  const loader=new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
+  loadModelBytes(value=>{if(!disposed)onProgress?.(value);}).then(bytes=>{
+   if(disposed)return null;
+   return loader.parseAsync(bytes,MODEL_URL.slice(0,MODEL_URL.lastIndexOf('/')+1));
+  }).then(gltf=>{
+   if(!gltf)return;
    if(disposed){disposeModel(gltf.scene);return;}
-   // The screen's UVs point at a placeholder in the texture atlas; remap them to fill the XMB canvas instead.
+   // The Blender export already fills 0–1 with U right and V up.
    const screen=gltf.scene.getObjectByName('screen_low');
    if(screen){
-    const {geometry}=screen, position=geometry.attributes.position, uv=geometry.attributes.uv;
-    geometry.computeBoundingBox();const {min,max}=geometry.boundingBox;
-    for(let i=0;i<position.count;i++)uv.setXY(i,(position.getX(i)-min.x)/(max.x-min.x),(position.getY(i)-min.y)/(max.y-min.y));
-    uv.needsUpdate=true;
     xmb.texture.anisotropy=renderer.capabilities.getMaxAnisotropy();
     // Emissive so the menu glows at its true colours, while the glossy surface still catches reflections.
+    screen.material.dispose();
     screen.material=new THREE.MeshStandardMaterial({color:'#000',emissive:'#fff',emissiveMap:xmb.texture,roughness:.18,metalness:0,toneMapped:false});
     glow=createButtonGlow(gltf.scene);glow.update();
     const hoverButton=name=>{glow.setHover(name);glow.update();render();};
@@ -103,7 +102,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAc
    }
    scene.add(gltf.scene);render();onStatus('ready');
    xmb.boot(performance.now()+250);
-  },bytes,()=>{if(!disposed)onStatus('error');});
+  }).catch(()=>{if(!disposed)onStatus('error');});
   resetView();
   return()=>{disposed=true;cancelAnimationFrame(loop);input?.dispose();glow?.dispose();xmb.dispose();api.current=null;resize.disconnect();controls.dispose();removeEventListener('keydown',key);renderer.domElement.removeEventListener('webglcontextlost',lost);disposeModel(scene);environment.dispose();ktx2.dispose();renderer.dispose();renderer.domElement.remove();};
  },[onStatus,onProgress]);

@@ -16,7 +16,7 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | `src/xmb/icons.js` | Lucide icon outlines (ISC licence) stroked onto the canvas with `drawIcon`. |
 | `src/xmb/buttonGlow.js` | Static halos around the PSP buttons that do something, brighter on hover. |
 | `src/xmb/XmbA11y.jsx` | Hidden semantic HTML copy of the content, plus a live region announcing the focused item. |
-| `src/MemoriesScene.jsx` | The three.js scene. Loads `public/models/psp-v2.glb` (lazy-loaded chunk), puts the XMB texture on the screen mesh, runs the render loop, and owns the camera. |
+| `src/MemoriesScene.jsx` | The three.js scene. Loads `public/models/psp-v3.glb` (lazy-loaded chunk), puts the XMB texture on the screen mesh, runs the render loop, and owns the camera. |
 | `src/PageWheel.jsx` | The Persona 5–style page wheel beside the PSP. It mirrors the XMB's current category and can jump to one. |
 | `src/layout.js` | `stageInsets()`: how much of the page the wheel reserves. Both the wheel and the camera framing read it. |
 | `src/App.jsx` | Page shell. Holds the XMB state with `useReducer`, opens links, and renders the wheel. |
@@ -124,12 +124,10 @@ Every draw rebuilds `this.hits`: rectangles in logical units, each carrying the 
 
 ## Putting it on the PSP (`MemoriesScene.jsx`)
 
-- **The screen mesh**: in the model, the screen is the node **`screen_low`**, a flat 1.687 × 0.948 grid. It originally shares the body's texture atlas, and its UVs point at a static placeholder image.
-- **Remapping on load**: when the model loads, the scene:
-  - rewrites the screen's UVs with a planar projection, `u = (x − minX) / width` and `v = (y − minY) / height`, so the whole canvas fills the glass
-  - gives the screen its own `MeshStandardMaterial`: black base colour, the XMB canvas as `emissiveMap`, `roughness .18`, and `toneMapped: false`
+- **The screen mesh**: the node **`screen_low`** is a flat 1.687 × 0.948 grid. Blender bakes its UVs to fill 0–1, with U following glTF +X and V following +Y. No runtime UV remap is needed. The cleanup accounts for Blender's Z-up import and the glTF exporter's V flip.
+- **The material**: the scene replaces the screen's placeholder with a `MeshStandardMaterial`: black base colour, XMB canvas as `emissiveMap`, `roughness .18`, and `toneMapped: false`.
 - **Why emissive**: the menu shows its exact colours regardless of the lighting preset or ACES tone mapping, while the glossy surface still picks up environment reflections that look like glass.
-- **The texture**: `CanvasTexture` with `SRGBColorSpace`, maximum anisotropy so it stays sharp at an angle, and the default `flipY`, which matches the remapped UVs. Mipmaps are off (`LinearFilter`): the texture is re-uploaded every frame and shown at about its own size.
+- **The texture**: `CanvasTexture` with `SRGBColorSpace`, maximum anisotropy so it stays sharp at an angle, and the default `flipY`, which matches the baked UVs. Mipmaps are off (`LinearFilter`): the texture is re-uploaded every frame and shown at about its own size.
 - **Render loop**: one `requestAnimationFrame` loop does two things.
   - It calls `xmb.tick(now)` every frame; the renderer decides whether a redraw is due (see Frame budget).
   - The scene re-renders only when the XMB redrew or the camera changed (`render()` just sets `needsRender`).
@@ -250,19 +248,22 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 
 ## The model pipeline
 
-- **Source**: `assets-src/psp.glb`, the Blender export. It is not shipped.
-- **Build**: `npm run model:optimize` (`scripts/optimize-model.sh`) writes `public/models/psp-v2.glb`.
-  - Textures become KTX2 (ETC1S for base colour and emissive, UASTC for normal and metal/roughness), but only when KTX-Software (`ktx`/`toktx`) is installed. Otherwise the JPEGs are kept.
-  - Geometry gets meshopt compression with one quantization grid for the whole scene.
-- **Loading**: `GLTFLoader` gets `MeshoptDecoder` and a `KTX2Loader`. Vite bundles the Basis transcoder that `KTX2Loader` finds on its own, and it is only fetched when the model has KTX2 textures.
-- **Node transforms**: quantization gives every node a scale. Code that places things next to a mesh must go through the node's transform: `buttonGlow.js` takes the box through `button.matrix`, and `press()` in `input.js` moves relative to the rest position.
-- **Names matter**: keep `screen_low` and the button meshes in `buttonActions` as separate, named objects when editing in Blender.
-- **Still to do**: KTX2 textures and the Blender clean-up, listed in `docs/perf-followups.md`.
-- **New version**: when the output changes, bump the file name (`psp-v3.glb`) in the script, in `MODEL_URL` in `MemoriesScene.jsx`, and in the preload in `index.html`, so cached copies are replaced.
+- **Source**: `assets-src/psp.glb`, preserved unchanged and excluded from the public build.
+- **Build**: `npm run model:optimize` requires Blender and KTX-Software 4.4+ (`ktx` on PATH). `BLENDER_BIN` can override the Blender executable; the usual macOS application path is detected automatically.
+- **Blender**: `scripts/prepare-model.py` writes a temporary cleaned export. It welds coincident vertices, removes degenerate and non-manifold internal faces conservatively, recalculates outward normals, decimates to 39,980 triangles, and joins static parts into `body_low`. All material faces are single-sided. It retains `screen_low` and the seven button meshes separately, with their exact names.
+- **Screen UVs**: planar projection is baked into the export, with U right and V up in the final glTF. The separate screen material carries no atlas texture.
+- **Textures**: albedo stays 1536²; emissive shrinks to 512², normal to 768², and metal/roughness to 256². ETC1S compresses albedo/emissive, UASTC with RDO compresses normal/metal/roughness, and all atlas textures have mipmaps. The XMB CanvasTexture continues to use linear filtering without mipmaps.
+- **Geometry**: meshopt compression uses one scene quantization grid. Nodes have transforms: halo placement goes through the button matrix and presses move from the rest position.
+- **Validation**: `npm run model:check` decodes the shipped asset and checks names, triangle/file budgets, culling, KTX2 textures, and screen UV orientation. The optimizer runs this check before replacing the public asset. Missing tools or failed validation leave the previous asset intact.
+- **Output**: `public/models/psp-v3.glb`, 562,600 bytes (466,794 gzip), 9 model draw calls instead of 20. The seven halo quads make 16 scene draw calls in total. Estimated texture GPU allocation is about 2.6 MB minimum; actual allocation depends on supported compression formats.
+- **Loading**: `src/modelAsset.js` owns `MODEL_URL` and shares one early fetch between the shell and scene. It starts alongside the lazy three.js import, streams byte progress when an uncompressed length is available, and clears failed downloads for Retry. An HTML fetch preload caused duplicate downloads in WebKit and has been removed.
+- **Decoding**: `GLTFLoader.parseAsync` gets the shared bytes, `MeshoptDecoder`, and `KTX2Loader`. Vite emits hashed Basis JS/WASM assets fetched only when KTX2 textures need them.
+- **Tradeoff**: v2's JPEG model was 651 KB (410 KB gzip). v3 is smaller before HTTP compression but larger after gzip and needs the Basis transcoder on a cold cache. The gain is lower GPU memory, fewer draw calls, fewer triangles, and no duplicate WebKit model download.
+- **New version**: bump the file name in `scripts/optimize-model.sh`, `src/modelAsset.js` and `scripts/check-model.mjs`, then rebuild. The ordinary Vite build uses the committed GLB without requiring Blender or KTX tools.
 
 ## Checking changes
 
-There are no automated tests. `npm run build` must pass. Then run `npm run dev` and check:
+`npm test`, `npm run model:check` and `npm run build` must pass. Then run `npm run dev` and check:
 
 - The screen boots: background first, then the menu.
 - Arrows move smoothly, Enter opens a write-up, Esc returns.

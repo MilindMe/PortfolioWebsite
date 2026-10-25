@@ -1,34 +1,28 @@
-# Performance follow-ups
+# Performance validation
 
-Remaining steps of the performance pass started on `perf/load-and-render`. The web side is done; these need KTX-Software and Blender. Delete this file once everything below is ticked.
+The Blender and KTX2 follow-ups are implemented by `scripts/prepare-model.py` and `scripts/optimize-model.sh`. The source stays untouched; the site ships `psp-v3.glb`. See [the model pipeline](xmb.md#the-model-pipeline) for prerequisites, texture choices, and the cold-load download tradeoff.
 
-## 1. KTX2 textures
+Completed:
 
-- [ ] Install KTX-Software 4.3+ from https://github.com/KhronosGroup/KTX-Software/releases (the `.pkg`; it is not on Homebrew). Check with `ktx --version`.
-- [ ] Run `npm run model:optimize`. It should no longer print "KTX-Software not found", and `npx gltf-transform inspect public/models/psp-v2.glb` should list the four textures as `image/ktx2`.
-- [ ] Check that the page loads the Basis transcoder (`basis_transcoder-*.wasm` in the Network panel) and that the textures look right in Dusky, Golden and Daylight, especially the normal-mapped buttons. If the albedo bands, move `baseColorTexture` from the `etc1s` to the `uastc` line in `scripts/optimize-model.sh`.
+- [x] KTX2 conversion for all four atlas textures, with the Basis decoder bundled by Vite.
+- [x] Blender cleanup, outward normals, backface culling, 39,980 triangles, and joined static body (9 meshes).
+- [x] Keep the screen and seven interactive button meshes separate and named.
+- [x] Reduce the emissive map to 512²; retain its atlas details.
+- [x] Bake screen UVs and remove the runtime remap.
+- [x] Version the shipped asset to v3 and replace the WebKit-duplicated preload with one shared early fetch.
+- [x] Add decoded model contract checks and fetch/progress/retry tests.
 
-The loader is already wired (`KTX2Loader` in `src/MemoriesScene.jsx`). Target: about 50 MB → about 10 MB of texture GPU memory.
+Validation on the production build (2026-10-25):
 
-## 2. Blender pass on `assets-src/psp.glb`
+- `npm test`: all three fetch/progress/retry checks pass.
+- `npm run model:check`: decoded mesh names, screen UV orientation, KTX2 textures, culling and budgets pass.
+- Full `npm run model:optimize` and `npm run build` pass (the existing large three.js chunk warning remains).
+- Headless Chrome using Metal, desktop Playwright WebKit, and emulated iPhone WebKit load the PSP without JavaScript errors. Screenshots were inspected in all three lighting modes and at the phone viewport.
+- Keyboard navigation, detail/back, D-pad, cross, circle, Home, screen focus/confirm and wheel input pass in desktop Chrome and WebKit. Emulated iPhone touch taps pass for the D-pad, cross, circle, Home and screen.
+- One model request and one fetch each for the Basis JS/WASM in every browser configuration. The font preload remains in place.
+- Observed 16 draw calls per rendered scene frame, roughly 30–31 active frames/s and 12 idle frames/s. Reduced motion settles to zero idle draws.
+- A deliberately failed model request shows Retry; restoring the request and clicking Retry loads the PSP.
 
-Import `assets-src/psp.glb`, edit, and export back over it (glTF Binary, +Y up, Apply Modifiers, no cameras or lights, UVs and normals only, no tangents or vertex colours).
+Physical-device checks still need hardware:
 
-- [ ] **Keep these as separate objects with these exact names**, since the code looks them up by name: `screen_low`, `button1_low`–`button4_low` (D-pad), `button6_low` (○), `button7_low` (✕), `button9_low` (Home). See `buttonActions` in `src/xmb/input.js`.
-- [ ] **Normals and culling**: Recalculate Outside on every part, and turn on Backface Culling in the material, so the export has `doubleSided: false`. Look around the model in solid view with backface culling on to find any holes.
-- [ ] **Remove what isn't seen**: delete internal faces (`middlepart_low` alone has 11.8k vertices), run Merge by Distance, and Decimate flat panels where the silhouette survives. Target: about 35–40k triangles, down from 58k.
-- [ ] **Join the non-interactive parts** into one object: `bottompart`, `middlepart`, `toppart`, `cap`, and buttons 5, 8, 10–15. That takes the draw calls from 20 to about 9.
-- [ ] **Emissive map**: check what it actually lights. If it is only a few LEDs, bake them into albedo and use a flat emissive colour; otherwise shrink the map to 512².
-- [ ] **Screen UVs**: unwrap `screen_low` so its UVs fill 0–1, with U following +X and V following +Y (the same mapping the code currently computes at load).
-
-## 3. Code changes after the new export
-
-- [ ] In `src/MemoriesScene.jsx`, delete the UV remap block under "The screen's UVs point at a placeholder" (keep the material swap).
-- [ ] After loading, make the body single-sided: set `side = THREE.FrontSide` on the model's materials, or rely on the export's `doubleSided: false`. Check for missing faces.
-- [ ] Bump the model version to `psp-v3.glb` in `scripts/optimize-model.sh`, `MODEL_URL` in `src/MemoriesScene.jsx`, and the preload in `index.html`, then run `npm run model:optimize` and delete the old `psp-v2.glb`.
-- [ ] Update `docs/xmb.md` ("Putting it on the PSP" still describes the UV remap) and delete this file.
-
-## Checking
-
-- `npm run build`, then `npm run preview`, and check that the D-pad, ✕, ○ and Home halos sit on their buttons and press, that screen taps and swipes work, and that the XMB text is crisp.
-- Log `renderer.info.render.calls` and `renderer.info.memory` once in dev to confirm draw calls and textures.
+- [ ] Open in the released Safari browser and on a real phone. Check text sharpness, touch input and idle power/frame rate. Automated desktop WebKit and an emulated iPhone viewport do not replace these checks.

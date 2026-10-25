@@ -7,6 +7,9 @@ import XmbA11y from './xmb/XmbA11y';
 import {saveTheme} from './xmb/themes';
 import PageWheel from './PageWheel';
 import {ROTATION_LOCKED} from './layout';
+import {preloadModel} from './modelAsset';
+
+preloadModel();
 
 // three.js lives in this chunk, so the shell and loading screen paint before it has downloaded.
 const MemoriesScene = lazy(() => import('./MemoriesScene'));
