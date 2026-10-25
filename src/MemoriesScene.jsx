@@ -1,16 +1,19 @@
 import React, {useEffect, useRef} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {KTX2Loader} from 'three/addons/loaders/KTX2Loader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {applyLighting} from './lighting';
 import {XmbRenderer} from './xmb/XmbRenderer';
 import {attachScreenInput, keyAction} from './xmb/input';
 import {createButtonGlow} from './xmb/buttonGlow';
-import {stageInsets} from './layout';
+import {ROTATION_LOCKED, stageInsets} from './layout';
 
-// Free rotation is switched off for now; flip this to let visitors drag or Shift+arrow the PSP around again.
-export const ROTATION_LOCKED=true;
 // Fraction of the free area (the viewport minus the page wheel's strip) the PSP spans, capped so it never overflows vertically.
+// Built by `npm run model:optimize` (meshopt geometry, KTX2 textures). Vite bundles the Basis transcoder that
+// KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
+const MODEL_URL='/models/psp-v2.glb';
 const FILL_WIDTH=.9, FILL_HEIGHT=.72, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 
 export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAction,onStatus,onProgress}) {
@@ -53,15 +56,12 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAc
   const xmb=new XmbRenderer(reduced);xmb.setState(xmbStateRef.current);
   // origin (where the action came from, as a world point) is unused for now; the saved pulse effect needs it.
   const act=(action,origin)=>xmbActionRef.current?.({...action,maxScroll:xmb.maxScroll});
-  // One loop renders camera moves as they happen and redraws the screen texture at up to 30 fps.
-  let needsRender=true, lastTick=0;
+  // One loop renders camera moves as they happen; the XMB decides when its texture is due (30 fps active, 12 idle).
+  let needsRender=true;
   const render=()=>{needsRender=true;};
   function animate(now){
    loop=requestAnimationFrame(animate);
-   if(now-lastTick>=32){
-    lastTick=now;
-    if(xmb.tick(now))needsRender=true;
-   }
+   if(xmb.tick(now))needsRender=true;
    if(needsRender&&!disposed){needsRender=false;renderer.render(scene,camera);}
   }
   loop=requestAnimationFrame(animate);
@@ -80,8 +80,12 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAc
   addEventListener('keydown',key);renderer.domElement.addEventListener('webglcontextlost',lost);
   controls.addEventListener('change',render);api.current={reset:resetView,lighting:mode=>{applyLighting(mode,'memories',lightRig);render();},xmb:state=>xmb.setState(state)};
   function disposeModel(root){root.traverse(o=>{o.geometry?.dispose();for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){for(const value of Object.values(m))if(value?.isTexture)value.dispose();m.dispose();}});}
+  // Progress by bytes; when the response is compressed and has no length, fall back to per-file progress.
   const manager=new THREE.LoadingManager();manager.onProgress=(_url,loaded,total)=>{if(!disposed)onProgress?.(loaded/total);};
-  new GLTFLoader(manager).load('/models/psp.glb',gltf=>{
+  const bytes=e=>{if(!disposed&&e.lengthComputable&&e.total)onProgress?.(e.loaded/e.total);};
+  // index.html preloads this file; keep the two paths in sync.
+  const ktx2=new KTX2Loader(manager).detectSupport(renderer);
+  new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2).load(MODEL_URL,gltf=>{
    if(disposed){disposeModel(gltf.scene);return;}
    // The screen's UVs point at a placeholder in the texture atlas; remap them to fill the XMB canvas instead.
    const screen=gltf.scene.getObjectByName('screen_low');
@@ -99,9 +103,9 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAc
    }
    scene.add(gltf.scene);render();onStatus('ready');
    xmb.boot(performance.now()+250);
-  },undefined,()=>{if(!disposed)onStatus('error');});
+  },bytes,()=>{if(!disposed)onStatus('error');});
   resetView();
-  return()=>{disposed=true;cancelAnimationFrame(loop);input?.dispose();glow?.dispose();xmb.dispose();api.current=null;resize.disconnect();controls.dispose();removeEventListener('keydown',key);renderer.domElement.removeEventListener('webglcontextlost',lost);disposeModel(scene);environment.dispose();renderer.dispose();renderer.domElement.remove();};
+  return()=>{disposed=true;cancelAnimationFrame(loop);input?.dispose();glow?.dispose();xmb.dispose();api.current=null;resize.disconnect();controls.dispose();removeEventListener('keydown',key);renderer.domElement.removeEventListener('webglcontextlost',lost);disposeModel(scene);environment.dispose();ktx2.dispose();renderer.dispose();renderer.domElement.remove();};
  },[onStatus,onProgress]);
  return <div className={`memories-stage${ROTATION_LOCKED?' rotation-locked':''}`} ref={host}></div>;
 }

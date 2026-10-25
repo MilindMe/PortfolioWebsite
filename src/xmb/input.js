@@ -39,8 +39,10 @@ export function attachScreenInput({element,camera,controls,model,screen,xmb,act,
  function press(target){
   const mesh=typeof target==='string'?model.getObjectByName(buttonFor[target]??''):target;
   if(!mesh)return;
-  mesh.position.z=-.012;invalidate();
-  setTimeout(()=>{mesh.position.z=0;invalidate();},120);
+  // Quantized models give every node a transform, so press relative to where the button rests.
+  const rest=mesh.userData.restZ??=mesh.position.z;
+  mesh.position.z=rest-.012;invalidate();
+  setTimeout(()=>{mesh.position.z=rest;invalidate();},120);
  }
  function down(event){
   if(!event.isPrimary)return;

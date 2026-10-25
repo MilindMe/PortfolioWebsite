@@ -5,7 +5,11 @@ import {itemSub} from './state';
 import {themeColors} from './themes';
 
 // The XMB is laid out in PSP-sized logical units and drawn at 2× into a canvas that textures the screen mesh.
+// Each frame stacks three layers: the soft backdrop (redrawn every frame at 1×), the menu (cached at 2×, redrawn
+// only when something changed) and the pulsing focus highlight (a few draws on top).
 export const SCREEN_W=480, SCREEN_H=270;
+// ~30 fps while the visitor is active or something is easing, ~12 fps for the idle waves.
+const ACTIVE_FRAME=32, IDLE_FRAME=80, ACTIVE_FOR=4000;
 const SCALE=2, FONT='"Helvetica Neue", Helvetica, Arial, sans-serif';
 const CAT_X=118, CAT_Y=74, CAT_W=78, ROW_H=34, ITEM_Y=CAT_Y+64, ABOVE_Y=CAT_Y-44;
 const TEXT='#dadada', BRIGHT='#ffffff';
@@ -36,22 +40,27 @@ function wrap(ctx,text,width){
 
 export class XmbRenderer{
  constructor(reducedMotion){
-  this.canvas=document.createElement('canvas');
-  this.canvas.width=SCREEN_W*SCALE;this.canvas.height=SCREEN_H*SCALE;
-  this.ctx=this.canvas.getContext('2d');
+  const layer=(width,height)=>{const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;return canvas.getContext('2d');};
+  // out is the texture; ctx is the cached menu layer every drawing helper uses; backdrop holds the waves.
+  this.out=layer(SCREEN_W*SCALE,SCREEN_H*SCALE);this.canvas=this.out.canvas;
+  this.ctx=layer(SCREEN_W*SCALE,SCREEN_H*SCALE);this.backdrop=layer(SCREEN_W,SCREEN_H);
   this.texture=new THREE.CanvasTexture(this.canvas);
   this.texture.colorSpace=THREE.SRGBColorSpace;
+  // The texture is re-uploaded every frame and shown at about its own size, so mipmaps would cost more than they give.
+  this.texture.generateMipmaps=false;this.texture.minFilter=THREE.LinearFilter;
   this.reduced=reducedMotion;
-  this.state=null;this.bootAt=null;this.lastTime=0;this.dirty=true;this.minute='';
+  this.state=null;this.bootAt=null;this.lastTime=0;this.dirty=true;this.minute='';this.moving=false;this.activeUntil=0;this.pulses=[];
   this.shown={cat:0,items:categories.map(()=>0),detail:0,photo:0,scroll:0,top:null,bottom:null};
   this.hits=[];this.maxScroll=0;this.photos=new Map();this.wrapped=new Map();this.hover=null;
  }
- setState(state){this.state=state;this.dirty=true;}
+ setState(state){this.state=state;this.dirty=true;this.poke();}
+ // Keeps the full frame rate for a while after the visitor does something.
+ poke(){this.activeUntil=performance.now()+ACTIVE_FOR;}
  boot(now){if(this.bootAt===null){this.bootAt=now;this.dirty=true;}}
  // The mouse position in logical screen units (or null); clickable things under it get a glow.
  setHover(point){
   if(point?.x===this.hover?.x&&point?.y===this.hover?.y)return;
-  this.hover=point?{x:point.x,y:point.y}:null;this.dirty=true;
+  this.hover=point?{x:point.x,y:point.y}:null;this.dirty=true;this.poke();
  }
  hovering(x,y,w,h){const p=this.hover;return !!p&&p.x>=x&&p.x<=x+w&&p.y>=y&&p.y<=y+h;}
  glow(x,y,radius){
@@ -64,9 +73,10 @@ export class XmbRenderer{
   for(let i=this.hits.length-1;i>=0;i--){const h=this.hits[i];if(x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)return h.action;}
   return null;
  }
- // Advances the animations and redraws when anything changed; returns whether the texture was updated.
+ // Advances the animations and redraws when a frame is due; returns whether the texture was updated.
  tick(now){
   const state=this.state;if(!state)return false;
+  if(now-this.lastTime<(this.moving||now<this.activeUntil?ACTIVE_FRAME:IDLE_FRAME))return false;
   const dt=Math.min(.1,(now-(this.lastTime||now))/1000);this.lastTime=now;
   const instant=this.reduced.matches, k=instant?1:1-Math.exp(-dt/.07), shown=this.shown;
   let moving=false;
@@ -87,8 +97,9 @@ export class XmbRenderer{
   if(minute!==this.minute){this.minute=minute;this.dirty=true;}
   const booted=this.bootAt===null?0:instant?Infinity:(now-this.bootAt)/1000;
   if(booted<1.4)moving=true;
+  this.moving=moving;
   if(instant&&!moving&&!this.dirty)return false;
-  this.draw(instant?8:now/1000,booted);
+  this.draw(instant?8:now/1000,booted,this.dirty||moving);
   this.dirty=false;this.texture.needsUpdate=true;
   return true;
  }
@@ -101,23 +112,54 @@ export class XmbRenderer{
   }
   return this.photos.get(src);
  }
- draw(t,booted){
+ draw(t,booted,changed){
+  const out=this.out;
+  out.setTransform(SCALE,0,0,SCALE,0,0);
+  out.globalAlpha=1;out.globalCompositeOperation='source-over';
+  out.fillStyle='#000';out.fillRect(0,0,SCREEN_W,SCREEN_H);
+  if(booted<=0){this.hits=[];this.pulses=[];return;}
+  this.background(t);
+  out.globalAlpha=clamp01(booted/.8);out.drawImage(this.backdrop.canvas,0,0,SCREEN_W,SCREEN_H);out.globalAlpha=1;
+  if(changed)this.foreground(booted);
+  out.drawImage(this.ctx.canvas,0,0,SCREEN_W,SCREEN_H);
+  this.pulse(t);
+ }
+ // Everything with blurred shadows: drawn into the cached layer, along with the hit areas.
+ foreground(booted){
   const ctx=this.ctx, state=this.state, shown=this.shown;
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.setTransform(SCALE,0,0,SCALE,0,0);
   ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
-  ctx.fillStyle='#000';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
-  this.hits=[];
-  if(booted<=0)return;
-  this.background(t,clamp01(booted/.8));
+  this.hits=[];this.pulses=[];
   const menu=clamp01((booted-.7)/.6), overlay=Math.max(shown.detail,shown.photo);
   this.status(menu);
-  this.menu(t,menu*(1-overlay),state.view==='menu');
-  if(shown.detail>0)this.detail(t,shown.detail*menu,state.view==='detail');
+  this.menu(menu*(1-overlay),state.view==='menu');
+  if(shown.detail>0)this.detail(shown.detail*menu,state.view==='detail');
   if(shown.photo>0)this.photoView(shown.photo*menu,state.view==='photo');
  }
- background(t,alpha){
-  const ctx=this.ctx, color=channels=>`rgb(${channels.map(Math.round).join(',')})`, top=color(this.shown.top), bottom=color(this.shown.bottom);
-  ctx.globalAlpha=alpha;
+ // The focused item's label and the selected link glow in time; foreground() leaves them out and records them here.
+ pulse(t){
+  const ctx=this.out, beat=Math.sin(t*3.2);
+  ctx.textAlign='left';ctx.textBaseline='middle';ctx.shadowOffsetX=ctx.shadowOffsetY=0;
+  for(const p of this.pulses){
+   ctx.globalAlpha=p.alpha;
+   if(p.link){
+    ctx.beginPath();ctx.roundRect(p.x,p.y-10,p.width,20,10);
+    ctx.shadowColor=`rgba(255,255,255,${.4+.2*beat})`;ctx.shadowBlur=6*SCALE;ctx.fillStyle='rgba(255,255,255,.92)';ctx.fill();
+    ctx.shadowColor='transparent';ctx.shadowBlur=0;
+    ctx.strokeStyle=ctx.fillStyle='#1b1b1f';drawIcon(ctx,'link',p.x+12,p.y,10);
+    ctx.font=`10px ${FONT}`;ctx.fillText(p.text,p.x+21,p.y+.5);
+   }else{
+    ctx.shadowColor=`rgba(255,255,255,${.45+.25*beat})`;ctx.shadowBlur=(4+3*beat)*SCALE;
+    ctx.font=p.font;ctx.fillStyle=BRIGHT;ctx.fillText(p.text,p.x,p.y);
+   }
+  }
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.globalAlpha=1;
+ }
+ // Drawn at 1× into its own canvas and scaled up: the waves are soft, so a quarter of the pixels looks the same.
+ background(t){
+  const ctx=this.backdrop, color=channels=>`rgb(${channels.map(Math.round).join(',')})`, top=color(this.shown.top), bottom=color(this.shown.bottom);
+  ctx.globalAlpha=1;
   const sky=ctx.createLinearGradient(0,0,0,SCREEN_H);sky.addColorStop(0,top);sky.addColorStop(1,bottom);
   ctx.fillStyle=sky;ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
   const glow=ctx.createRadialGradient(90,20,0,90,20,260);glow.addColorStop(0,'rgba(255,255,255,.16)');glow.addColorStop(1,'rgba(255,255,255,0)');
@@ -149,7 +191,7 @@ export class XmbRenderer{
   const bx=SCREEN_W-30;ctx.strokeRect(bx,y+4.5,17,8);ctx.fillRect(bx+17.5,y+6.5,1.6,4);ctx.fillRect(bx+2,y+6.5,13,4);
   this.noShadow();ctx.globalAlpha=1;
  }
- menu(t,alpha,interactive){
+ menu(alpha,interactive){
   if(alpha<=0)return;
   const ctx=this.ctx, state=this.state, shown=this.shown;
   ctx.textBaseline='middle';
@@ -163,11 +205,11 @@ export class XmbRenderer{
    if(near>0){ctx.globalAlpha=alpha*near;ctx.fillStyle=TEXT;ctx.font=`11px ${FONT}`;ctx.textAlign='center';ctx.fillText(category.label,x,CAT_Y+27);}
    if(interactive)this.hits.push({x:x-CAT_W/2,y:CAT_Y-24,w:CAT_W,h:46,action:{type:'FOCUS',cat:c}});
    const column=clamp01(1-Math.abs(offset)*1.6);
-   if(column>0)this.items(t,category,c,x,alpha*column,interactive&&c===state.cat);
+   if(column>0)this.items(category,c,x,alpha*column,interactive&&c===state.cat);
   });
   this.noShadow();ctx.globalAlpha=1;
  }
- items(t,category,c,x,alpha,interactive){
+ items(category,c,x,alpha,interactive){
   const ctx=this.ctx, position=this.shown.items[c], focused=this.state.item[c];
   category.items.forEach((item,i)=>{
    const d=i-position;
@@ -180,14 +222,14 @@ export class XmbRenderer{
    ctx.strokeStyle=BRIGHT;this.shadow(3);
    drawIcon(ctx,item.icon,x,y,24*(.7+.3*near));
    ctx.textAlign='left';ctx.fillStyle=near>.5?BRIGHT:TEXT;ctx.font=`${11+near}px ${FONT}`;
-   if(i===focused&&near>.5){ctx.shadowColor=`rgba(255,255,255,${.45+.25*Math.sin(t*3.2)})`;ctx.shadowBlur=(4+3*Math.sin(t*3.2))*SCALE;ctx.shadowOffsetX=ctx.shadowOffsetY=0;}
-   const sub=itemSub(this.state,item);
-   ctx.fillText(item.label,x+26,sub?y-5*near:y);
+   const sub=itemSub(this.state,item), labelY=sub?y-5*near:y;
+   if(i===focused&&near>.5)this.pulses.push({text:item.label,x:x+26,y:labelY,font:ctx.font,alpha:ctx.globalAlpha});
+   else ctx.fillText(item.label,x+26,labelY);
    if(sub&&near>0){this.shadow(2);ctx.globalAlpha=alpha*fade*near;ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,x+26,y+8);}
    if(interactive&&fade>.5)this.hits.push({x:x-18,y:y-ROW_H/2,w:SCREEN_W-x+18,h:ROW_H,action:i===focused?{type:'CONFIRM'}:{type:'FOCUS',cat:c,item:i}});
   });
  }
- detail(t,alpha,interactive){
+ detail(alpha,interactive){
   const ctx=this.ctx, state=this.state, item=categories[state.cat].items[state.item[state.cat]], {title,body,links=[]}=item.detail??{};
   if(!title)return;
   ctx.globalAlpha=alpha;ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
@@ -213,11 +255,12 @@ export class XmbRenderer{
   links.forEach((link,i)=>{
    const width=ctx.measureText(link.label).width+30, selected=i===state.link;
    if(interactive&&this.hovering(x,y-12,width,24))this.glow(x+width/2,y,width*.7);
-   ctx.beginPath();ctx.roundRect(x,y-10,width,20,10);
-   if(selected){ctx.shadowColor=`rgba(255,255,255,${.4+.2*Math.sin(t*3.2)})`;ctx.shadowBlur=6*SCALE;ctx.fillStyle='rgba(255,255,255,.92)';ctx.fill();this.noShadow();}
-   else{ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=.8;ctx.stroke();}
-   ctx.strokeStyle=ctx.fillStyle=selected?'#1b1b1f':TEXT;drawIcon(ctx,'link',x+12,y,10);
-   ctx.textAlign='left';ctx.fillText(link.label,x+21,y+.5);
+   if(selected)this.pulses.push({link:true,text:link.label,x,y,width,alpha:ctx.globalAlpha});
+   else{
+    ctx.beginPath();ctx.roundRect(x,y-10,width,20,10);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=.8;ctx.stroke();
+    ctx.strokeStyle=ctx.fillStyle=TEXT;drawIcon(ctx,'link',x+12,y,10);
+    ctx.textAlign='left';ctx.fillText(link.label,x+21,y+.5);
+   }
    if(interactive)this.hits.push({x,y:y-12,w:width,h:24,action:{type:'CONFIRM',link:i}});
    x+=width+8;
   });

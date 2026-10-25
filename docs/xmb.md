@@ -16,7 +16,7 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | `src/xmb/icons.js` | Lucide icon outlines (ISC licence) stroked onto the canvas with `drawIcon`. |
 | `src/xmb/buttonGlow.js` | Static halos around the PSP buttons that do something, brighter on hover. |
 | `src/xmb/XmbA11y.jsx` | Hidden semantic HTML copy of the content, plus a live region announcing the focused item. |
-| `src/MemoriesScene.jsx` | The three.js scene. Loads `public/models/psp.glb`, puts the XMB texture on the screen mesh, runs the render loop, and owns the camera. |
+| `src/MemoriesScene.jsx` | The three.js scene. Loads `public/models/psp-v2.glb` (lazy-loaded chunk), puts the XMB texture on the screen mesh, runs the render loop, and owns the camera. |
 | `src/PageWheel.jsx` | The Persona 5–style page wheel beside the PSP. It mirrors the XMB's current category and can jump to one. |
 | `src/layout.js` | `stageInsets()`: how much of the page the wheel reserves. Both the wheel and the camera framing read it. |
 | `src/App.jsx` | Page shell. Holds the XMB state with `useReducer`, opens links, and renders the wheel. |
@@ -81,6 +81,13 @@ The reducer is pure and has no DOM access. Side effects such as opening links li
 
 ### Layers, drawn in order each frame
 
+Each frame stacks three canvases into the texture canvas (`out`):
+
+- **Backdrop** (`this.backdrop`, 480×270, 1×): item 1 below, redrawn every frame and scaled up. The waves are soft, so a quarter of the pixels looks the same.
+- **Foreground** (`this.ctx`, 960×540): items 2–5, everything with blurred shadows. It is cached and redrawn only while something is dirty or easing, so on an idle frame it costs one `drawImage`. Every drawing helper uses `this.ctx`, so new views land in the cache automatically. Hit boxes are rebuilt with it.
+- **Pulse** (`pulse()`): the glowing focused label and the selected link pill, which change every frame. `foreground()` skips drawing them and pushes them to `this.pulses` instead.
+
+
 1. **Background**: a vertical gradient in the current theme's colours (cross-faded when the theme changes), a soft top-left glow, and four sine "ribbons" (`waves`) blended with `'lighter'`.
 2. **Status bar**: date and time in a bordered box, plus a battery glyph.
 3. **Menu**:
@@ -95,6 +102,7 @@ The reducer is pure and has no DOM access. Side effects such as opening links li
 
 - `tick(now)` eases every displayed value toward its target with exponential smoothing (`1 - exp(-dt/0.07)`, about 250 ms to settle). Values tracked: category position, each category's item position, detail and photo opacity, and scroll.
 - **Boot**: `boot(at)` is called 250 ms after the model loads. Before that the screen is black. The background then fades in over 0.8 s and the menu follows.
+- **Frame budget**: `tick()` gates itself. It redraws every 32 ms (~30 fps) while something is easing or for 4 s after any `setState`/`setHover` (`poke()`), and otherwise every 80 ms (~12 fps) for the idle waves (`ACTIVE_FRAME`, `IDLE_FRAME`, `ACTIVE_FOR`).
 - **Reduced motion**: with `prefers-reduced-motion`, easing is instant, the waves freeze, and the canvas only redraws when the state or the clock's minute changes.
 
 ### Hit boxes and hover glow
@@ -116,14 +124,14 @@ Every draw rebuilds `this.hits`: rectangles in logical units, each carrying the 
 
 ## Putting it on the PSP (`MemoriesScene.jsx`)
 
-- **The screen mesh**: in `psp.glb`, the screen is the node **`screen_low`**, a flat 1.687 × 0.948 grid. It originally shares the body's texture atlas, and its UVs point at a static placeholder image.
+- **The screen mesh**: in the model, the screen is the node **`screen_low`**, a flat 1.687 × 0.948 grid. It originally shares the body's texture atlas, and its UVs point at a static placeholder image.
 - **Remapping on load**: when the model loads, the scene:
   - rewrites the screen's UVs with a planar projection, `u = (x − minX) / width` and `v = (y − minY) / height`, so the whole canvas fills the glass
   - gives the screen its own `MeshStandardMaterial`: black base colour, the XMB canvas as `emissiveMap`, `roughness .18`, and `toneMapped: false`
 - **Why emissive**: the menu shows its exact colours regardless of the lighting preset or ACES tone mapping, while the glossy surface still picks up environment reflections that look like glass.
-- **The texture**: `CanvasTexture` with `SRGBColorSpace`, maximum anisotropy so it stays sharp at an angle, and the default `flipY`, which matches the remapped UVs.
+- **The texture**: `CanvasTexture` with `SRGBColorSpace`, maximum anisotropy so it stays sharp at an angle, and the default `flipY`, which matches the remapped UVs. Mipmaps are off (`LinearFilter`): the texture is re-uploaded every frame and shown at about its own size.
 - **Render loop**: one `requestAnimationFrame` loop does two things.
-  - The XMB ticks at up to about 30 fps (`now - lastTick >= 32`).
+  - It calls `xmb.tick(now)` every frame; the renderer decides whether a redraw is due (see Frame budget).
   - The scene re-renders only when the XMB redrew or the camera changed (`render()` just sets `needsRender`).
   - rAF pauses on its own in background tabs.
 
@@ -131,7 +139,7 @@ Every draw rebuilds `this.hits`: rectangles in logical units, each carrying the 
 
 The PSP faces the camera head-on: the model has no roll, and the camera sits straight in front at `(0, 0, distance)`.
 
-At the top of `MemoriesScene.jsx`:
+`ROTATION_LOCKED` lives in `src/layout.js` (so `App.jsx` can read it without loading the three.js chunk); the framing constants are at the top of `MemoriesScene.jsx`:
 
 ```js
 export const ROTATION_LOCKED=true;
@@ -171,7 +179,7 @@ Pressing a mapped key also animates the matching PSP button.
   - A tap (under 6 px of movement) runs `hitTest`.
   - A swipe (over 24 px) moves the menu. Horizontal swipes change category; vertical swipes change item.
   - The wheel steps items (40 px of delta per step) and only blocks page scrolling while the pointer is over the screen.
-- **Physical buttons** (mesh names in `psp.glb`):
+- **Physical buttons** (mesh names in the model):
 
   | Mesh | Button | Action |
   | --- | --- | --- |
@@ -201,7 +209,7 @@ The page background is a plain near-black gradient (`.memories-stage` in `styles
 
 A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow screens).
 
-- **Labels**: big bold Anton type (loaded from Google Fonts in `index.html`, falling back to Impact), one per category in `content.js`, laid out along rays 34° apart.
+- **Labels**: big bold Anton type (self-hosted from `public/fonts/` and preloaded in `index.html`, falling back to Impact), one per category in `content.js`, laid out along rays 34° apart.
 - **Spin**:
   - When the XMB changes category, the label wheel and the ticked disc rotate by `--active × −34°` with an overshooting cubic-bezier, so the new page lands on the red marker at 3 o'clock.
   - The active label switches from outline to solid white with a hard black shadow, and plays `wheel-pop`.
@@ -239,6 +247,18 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 - **Links need a live user gesture**: `window.open` must run synchronously inside the key or pointer handler. That's why `xmbLink` runs in `App.jsx` before dispatching, rather than in an effect.
 - **`xmbRef` in `App.jsx`**: it is updated with the reducer's result immediately, so several actions in one event (or before React re-renders) see the latest state.
 - **The texture is disposed with the model**: `disposeModel` already disposes the screen material's `emissiveMap`, and `xmb.dispose()` runs on unmount. Disposing twice is harmless.
+
+## The model pipeline
+
+- **Source**: `assets-src/psp.glb`, the Blender export. It is not shipped.
+- **Build**: `npm run model:optimize` (`scripts/optimize-model.sh`) writes `public/models/psp-v2.glb`.
+  - Textures become KTX2 (ETC1S for base colour and emissive, UASTC for normal and metal/roughness), but only when KTX-Software (`ktx`/`toktx`) is installed. Otherwise the JPEGs are kept.
+  - Geometry gets meshopt compression with one quantization grid for the whole scene.
+- **Loading**: `GLTFLoader` gets `MeshoptDecoder` and a `KTX2Loader`. Vite bundles the Basis transcoder that `KTX2Loader` finds on its own, and it is only fetched when the model has KTX2 textures.
+- **Node transforms**: quantization gives every node a scale. Code that places things next to a mesh must go through the node's transform: `buttonGlow.js` takes the box through `button.matrix`, and `press()` in `input.js` moves relative to the rest position.
+- **Names matter**: keep `screen_low` and the button meshes in `buttonActions` as separate, named objects when editing in Blender.
+- **Still to do**: KTX2 textures and the Blender clean-up, listed in `docs/perf-followups.md`.
+- **New version**: when the output changes, bump the file name (`psp-v3.glb`) in the script, in `MODEL_URL` in `MemoriesScene.jsx`, and in the preload in `index.html`, so cached copies are replaced.
 
 ## Checking changes
 

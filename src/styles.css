@@ -1,3 +1,5 @@
+/* Anton (SIL OFL), Latin subset, self-hosted for the page wheel; preloaded in index.html. */
+@font-face { font-family: Anton; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/anton-latin.woff2') format('woff2'); }
 :root { font-family: Arial, sans-serif; color: #e8e4d2; background: #080809; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; }

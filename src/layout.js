@@ -1,3 +1,7 @@
+// Free rotation is switched off for now; flip this to let visitors drag or Shift+arrow the PSP around again.
+// Lives here rather than in MemoriesScene so the page shell can read it without pulling in the lazy three.js chunk.
+export const ROTATION_LOCKED=true;
+
 // Space reserved for the page wheel, in px. The PSP is framed in what's left; the wheel fills the reserved strip.
 // Wide screens put the wheel on the left; narrow ones give it everything above a strip just tall enough for the PSP.
 export function stageInsets(width,height){

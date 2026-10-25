@@ -1,12 +1,15 @@
-import React, {useCallback, useEffect, useReducer, useRef, useState} from 'react';
+import React, {Suspense, lazy, useCallback, useEffect, useReducer, useRef, useState} from 'react';
 import {RefreshCw, RotateCcw, Sun} from 'lucide-react';
-import MemoriesScene, {ROTATION_LOCKED} from './MemoriesScene';
 import LoadingScreen from './LoadingScreen';
 import {lightingModes} from './lighting';
 import {initialXmb, xmbLink, xmbReducer} from './xmb/state';
 import XmbA11y from './xmb/XmbA11y';
 import {saveTheme} from './xmb/themes';
 import PageWheel from './PageWheel';
+import {ROTATION_LOCKED} from './layout';
+
+// three.js lives in this chunk, so the shell and loading screen paint before it has downloaded.
+const MemoriesScene = lazy(() => import('./MemoriesScene'));
 
 class SceneBoundary extends React.Component {
   state = {failed: false};
@@ -57,7 +60,9 @@ export default function App() {
     <main className={`page${ROTATION_LOCKED ? ' rotation-locked' : ''}`} aria-label="Memories — interactive PSP" inert={splash}>
       <div className="scene">
         <SceneBoundary key={attempt} onError={reportError}>
-          <MemoriesScene lightMode={lightMode} reset={reset} xmbState={xmb} onXmbAction={xmbAction} onStatus={setStatus} onProgress={reportProgress} />
+          <Suspense fallback={null}>
+            <MemoriesScene lightMode={lightMode} reset={reset} xmbState={xmb} onXmbAction={xmbAction} onStatus={setStatus} onProgress={reportProgress} />
+          </Suspense>
         </SceneBoundary>
       </div>
       <PageWheel state={xmb} onSelect={cat => xmbAction({type: 'GOTO', cat})} />
