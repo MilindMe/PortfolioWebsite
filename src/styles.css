@@ -32,9 +32,46 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .light-slider-layout input{writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;margin:0;accent-color:#d8a76d;cursor:pointer;touch-action:none}
 .light-stop-labels{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#b9c5b5;font-size:12px}
 .light-stop-labels span{height:18px;display:flex;align-items:center}
+.memories-stage.rotation-locked>canvas:not(.memory-dots),.memories-stage.rotation-locked>canvas:active{cursor:default}
+.page.rotation-locked .light-toggle{bottom:26px}
+.page.rotation-locked .light-panel{bottom:76px}
+/* Page wheel: Persona 5–style half wheel on the left (above the PSP on narrow screens). Sizes come from --r and --font. */
+.page-wheel{--red:#e8202a;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none}
+.wheel-disc,.wheel-spin{position:absolute;left:0;top:50%;transform:rotate(calc(var(--active) * -34deg));transition:transform .6s var(--spin)}
+.wheel-disc{width:calc(var(--r) * 2);height:calc(var(--r) * 2);margin:calc(var(--r) * -1) 0 0 calc(var(--r) * -1);border-radius:50%;
+ background:radial-gradient(circle,var(--red) 0 8%,#0d0d0f 8% 10%,var(--paper) 10% 11%,#0d0d0f 11% 61%,#232327 61% 62%,#0d0d0f 62% 91%,var(--red) 91% 95%,#0d0d0f 95%);
+ box-shadow:0 0 0 4px var(--paper),0 0 0 9px #0d0d0f,0 20px 80px #000}
+.wheel-disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(var(--paper) 0 1.2deg,transparent 1.2deg 11.25deg);
+ -webkit-mask:radial-gradient(circle,transparent 0 84%,#000 84% 89%,transparent 89%);mask:radial-gradient(circle,transparent 0 84%,#000 84% 89%,transparent 89%);opacity:.55}
+.wheel-marker{position:absolute;left:calc(var(--r) * .24);top:50%;width:calc(var(--r) * 1.02);height:calc(var(--font) * 1.35);transform:translateY(-50%);transform-origin:left center;
+ filter:drop-shadow(8px 7px 0 #000);animation:wheel-marker .45s var(--spin) both}
+.wheel-marker i{position:absolute;inset:0;background:var(--red);clip-path:polygon(0 16%,62% 4%,100% 0,95% 52%,100% 100%,40% 90%,3% 84%,1% 48%)}
+.wheel-label{position:absolute;left:0;top:0;transform-origin:0 0;transform:rotate(calc(var(--i) * 34deg)) translate(calc(var(--r) * .3),-50%);
+ font:400 var(--font)/1 Anton,Impact,"Arial Narrow",sans-serif;letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;pointer-events:auto;
+ opacity:calc(1 - var(--d) * .28);transition:opacity .4s}
+.wheel-label.far{visibility:hidden}
+.wheel-label span{display:inline-block;padding:0 .08em;transform-origin:left center;transform:skewX(-10deg) scale(.74);color:transparent;-webkit-text-stroke:1.5px #f4f1ea99;transition:transform .45s var(--spin),color .25s}
+.wheel-label:hover span{color:#f4f1ea40}
+.wheel-label.active span{color:#fff;-webkit-text-stroke:0;text-shadow:3px 3px 0 #000,6px 6px 0 #000;transform:skewX(-10deg) scale(1.06);animation:wheel-pop .5s var(--spin)}
+.wheel-label:focus-visible{outline:none}
+.wheel-label:focus-visible span{outline:2px solid var(--paper);outline-offset:4px}
+.wheel-tag{position:absolute;left:calc(var(--r) * .56);top:calc(50% + var(--font) * .6);max-width:calc(100% - var(--r) * .56 - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ padding:6px 12px 6px 10px;background:#000;border-left:4px solid var(--red);color:#fff;font:700 13px/1.2 Arial,sans-serif;transform:rotate(-3deg) skewX(-12deg);transform-origin:left;animation:wheel-tag .35s var(--spin) both}
+.wheel-tag b{margin-right:8px;color:var(--red);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+@keyframes wheel-pop{0%{transform:skewX(-10deg) scale(.74) rotate(-5deg)}55%{transform:skewX(-14deg) scale(1.2) rotate(2deg)}100%{transform:skewX(-10deg) scale(1.06)}}
+@keyframes wheel-marker{0%{transform:translateY(-50%) scaleX(.15);opacity:0}60%{transform:translateY(-50%) scaleX(1.06);opacity:1}100%{transform:translateY(-50%) scaleX(1)}}
+@keyframes wheel-tag{0%{transform:rotate(-3deg) skewX(-12deg) translateX(-24px);opacity:0}100%{transform:rotate(-3deg) skewX(-12deg);opacity:1}}
 @media (max-width: 700px) {
   .reset-view { right: 16px; bottom: 18px; width: 36px; height: 36px; }
   .light-toggle { right: 16px; bottom: 64px; width: 36px; height: 36px; }
   .light-panel { right: 14px; bottom: 110px; }
+  .page.rotation-locked .light-toggle { bottom: 18px; }
+  .page.rotation-locked .light-panel { bottom: 64px; }
+}
+/* Matches the narrow breakpoint in src/layout.js: the PSP sits at the bottom, so the lighting control moves to the top corner. */
+@media (max-width: 759px) {
+  .page.rotation-locked .light-toggle { top: 16px; bottom: auto; }
+  .page.rotation-locked .light-panel { inset: 62px 14px auto auto; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}

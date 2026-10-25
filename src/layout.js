@@ -1,0 +1,5 @@
+// Space reserved for the page wheel, in px. The PSP is framed in what's left; the wheel fills the reserved strip.
+// Wide screens put the wheel on the left; narrow ones give it everything above a strip just tall enough for the PSP.
+export function stageInsets(width,height){
+ return width>=760?{left:Math.round(Math.min(width*.36,520)),top:0}:{left:0,top:Math.round(Math.max(height*.36,height-width*.62))};
+}

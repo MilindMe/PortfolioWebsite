@@ -1,8 +1,12 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useReducer, useRef, useState} from 'react';
 import {RefreshCw, RotateCcw, Sun} from 'lucide-react';
-import MemoriesScene from './MemoriesScene';
+import MemoriesScene, {ROTATION_LOCKED} from './MemoriesScene';
 import LoadingScreen from './LoadingScreen';
 import {lightingModes} from './lighting';
+import {initialXmb, xmbLink, xmbReducer} from './xmb/state';
+import XmbA11y from './xmb/XmbA11y';
+import {saveTheme} from './xmb/themes';
+import PageWheel from './PageWheel';
 
 class SceneBoundary extends React.Component {
   state = {failed: false};
@@ -20,6 +24,18 @@ export default function App() {
   const [splash, setSplash] = useState(true);
   const reportProgress = useCallback(value => setProgress(previous => Math.max(previous, value * .94)), []);
   const reportError = useCallback(() => setStatus('error'), []);
+  const [xmb, dispatchXmb] = useReducer(xmbReducer, undefined, initialXmb);
+  const xmbRef = useRef(xmb);
+  xmbRef.current = xmb;
+  // Links open here, inside the key or pointer event, so the browser allows the new tab.
+  const xmbAction = useCallback(action => {
+    const url = xmbLink(xmbRef.current, action);
+    if (url?.startsWith('mailto:')) location.href = url;
+    else if (url) open(url, '_blank', 'noopener');
+    xmbRef.current = xmbReducer(xmbRef.current, action);
+    dispatchXmb(action);
+  }, []);
+  useEffect(() => saveTheme(xmb.theme), [xmb.theme]);
 
   useEffect(() => {
     if (status === 'error') { setSplash(false); return; }
@@ -38,14 +54,16 @@ export default function App() {
 
   const mode = lightingModes.find(mode => mode.id === lightMode);
   return <div className="app-shell memories-page">
-    <main className="page" aria-label="Memories — interactive PSP" inert={splash}>
+    <main className={`page${ROTATION_LOCKED ? ' rotation-locked' : ''}`} aria-label="Memories — interactive PSP" inert={splash}>
       <div className="scene">
         <SceneBoundary key={attempt} onError={reportError}>
-          <MemoriesScene lightMode={lightMode} reset={reset} onStatus={setStatus} onProgress={reportProgress} />
+          <MemoriesScene lightMode={lightMode} reset={reset} xmbState={xmb} onXmbAction={xmbAction} onStatus={setStatus} onProgress={reportProgress} />
         </SceneBoundary>
       </div>
+      <PageWheel state={xmb} onSelect={cat => xmbAction({type: 'GOTO', cat})} />
+      <XmbA11y state={xmb} />
       {status === 'error' && <button className="scene-status retry" onClick={retry} aria-label="Unable to load the PSP. Retry" title="Unable to load the PSP. Retry"><RefreshCw size={24} /></button>}
-      <button className="reset-view" onClick={() => setReset(value => value + 1)} aria-label="Reset camera view" title="Reset camera view"><RotateCcw size={17} strokeWidth={1.5} /></button>
+      {!ROTATION_LOCKED && <button className="reset-view" onClick={() => setReset(value => value + 1)} aria-label="Reset camera view" title="Reset camera view"><RotateCcw size={17} strokeWidth={1.5} /></button>}
       <button className="light-toggle" popoverTarget="scene-light-panel" aria-label={`Lighting: ${mode.label}. Adjust lighting`} title="Adjust lighting"><Sun size={18} strokeWidth={1.5} /></button>
       <div id="scene-light-panel" className="light-panel" popover="auto">
         <div className="light-slider-layout">
