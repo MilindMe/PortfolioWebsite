@@ -11,12 +11,16 @@ export const categories = [
    {id:'portfolio', label:'PSP Portfolio', sub:'React · three.js', icon:'code',
     detail:{title:'PSP Portfolio', body:'This site. A PSP model rendered with three.js whose screen runs a recreation of the XMB, drawn into a canvas texture and driven by keyboard, touch and the PSP\'s own buttons.\n\nStack: React 19, Vite, three.js, Canvas 2D.',
      links:[{label:'Source', url:'https://github.com/MilindMe'}]}},
-   {id:'project-two', label:'Project Two', sub:'Replace with a real project', icon:'code',
+
+   {id:'project-two', label:'Music Wesbite', sub:'Replace with a real project', icon:'code',
     detail:{title:'Project Two', body:'Describe the problem, what you built and what you learned. Keep paragraphs short; the PSP screen is small and scrolls with ↑ ↓.',
-     links:[{label:'GitHub', url:'https://github.com/'}, {label:'Live demo', url:'https://example.com/'}]}},
-   {id:'project-three', label:'Project Three', sub:'Replace with a real project', icon:'code',
+     links:[{label:'GitHub', url:'https://github.com/'}, 
+      {label:'Live demo', url:'https://example.com/'}]}},
+
+   {id:'project-three', label:'Lalwa', sub:'Replace with a real project', icon:'code',
     detail:{title:'Project Three', body:'Another project write-up. Mention the stack, your role and any numbers that show impact.',
      links:[{label:'GitHub', url:'https://github.com/'}]}},
+
   ],
  },
  {
@@ -53,7 +57,7 @@ export const categories = [
   id:'contact', label:'Contact', icon:'network',
   items:[
    {id:'email', label:'Email', sub:'hello@example.com', icon:'mail', link:'mailto:hello@example.com'},
-   {id:'github', label:'GitHub', sub:'github.com/MilindTextNow', icon:'github', link:'https://github.com/MilindTextNow'},
+   {id:'github', label:'GitHub', sub:'github.com/MilindMe', icon:'github', link:'https://github.com/MilindMe'},
    {id:'linkedin', label:'LinkedIn', sub:'Connect with me', icon:'linkedin', link:'https://www.linkedin.com/'},
    {id:'resume', label:'Résumé', sub:'PDF — add /public/resume.pdf', icon:'file', link:'/resume.pdf'},
   ],
