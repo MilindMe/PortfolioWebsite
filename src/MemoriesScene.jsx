@@ -14,7 +14,7 @@ import {MODEL_URL, loadModelBytes} from './modelAsset';
 // Built by `npm run model:optimize` (meshopt geometry, KTX2 textures). Vite bundles the Basis transcoder that
 // KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
 // Fraction of the free area the PSP spans, capped so it never overflows vertically.
-const FILL_WIDTH=.9, FILL_HEIGHT=.72, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
+const FILL_WIDTH=.95, FILL_HEIGHT=.8, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 
 export default function MemoriesScene({lightMode='golden',reset,xmbState,onXmbAction,onStatus,onProgress}) {
  const lightModeRef=useRef(lightMode);lightModeRef.current=lightMode;

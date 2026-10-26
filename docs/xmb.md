@@ -145,7 +145,7 @@ The PSP faces the camera head-on: the model has no roll, and the camera sits str
 
 ```js
 export const ROTATION_LOCKED=true;
-const FILL_WIDTH=.9, FILL_HEIGHT=.72, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
+const FILL_WIDTH=.95, FILL_HEIGHT=.8, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 ```
 
 - **Free area**: `stageInsets()` in `src/layout.js` reserves a strip of the page for the wheel. The PSP is framed in the rest.
