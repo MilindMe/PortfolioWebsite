@@ -118,7 +118,7 @@ Every draw rebuilds `this.hits`: rectangles in logical units, each carrying the 
 ## Themes (`themes.js`)
 
 - **The list**: each theme in `themes` has an `id`, a `label` and gradient `colors: [top, bottom]`. `colors: null` means "follow the month" (the original PSP's monthly colours); that's the `monthly` theme.
-- **Default**: `DEFAULT_THEME` is `crimson`, red to match the page wheel.
+- **Default**: `DEFAULT_THEME` is `crimson`. The page wheel uses the active theme’s top gradient colour for its accents.
 - **Settings column**: `content.js` builds the **Settings** category from `themes`, one item per theme, each carrying `theme: id`.
   - Confirming one sets `state.theme`.
   - `itemSub()` in `state.js` shows "✓ In use" under the active theme. Both the renderer and the screen-reader announcement use it.
@@ -218,7 +218,7 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
   - The marker is remounted with `key` so its `wheel-marker` animation replays.
   - The black tag under the marker shows the view (Browsing / Reading / Viewing) and the focused item, and slides in again when either changes.
 - **Clicking a label** dispatches `GOTO`, which closes any open detail or photo and moves the XMB to that page.
-- **Sizes**: the wheel fills the strip from `stageInsets()`. Its radius is `min(height × 0.4, width × 0.8)`, and everything else scales from the CSS variables `--r` and `--font`.
+- **Sizes**: the wheel fills the strip from `stageInsets()`. Its radius is `0.92 × min(height × 0.4, width × 0.8)`, and everything else scales from the CSS variables `--r` and `--font`.
 - **Animation cost**: only transforms and opacity are animated. The global reduced-motion rule turns the animations off.
 - **Accessibility**: the wheel is a `<nav aria-label="Pages">` of real buttons, with `aria-current="page"` on the active one. Labels more than two steps away are hidden, so they can't be clicked until the wheel turns closer.
 

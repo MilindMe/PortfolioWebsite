@@ -36,16 +36,16 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .page.rotation-locked .light-toggle{bottom:26px}
 .page.rotation-locked .light-panel{bottom:76px}
 /* Page wheel: Persona 5–style half wheel on the left (above the PSP on narrow screens). Sizes come from --r and --font. */
-.page-wheel{--red:#e8202a;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none}
+.page-wheel{--accent:#c8222c;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none}
 .wheel-disc,.wheel-spin{position:absolute;left:0;top:50%;transform:rotate(calc(var(--active) * -34deg));transition:transform .6s var(--spin)}
 .wheel-disc{width:calc(var(--r) * 2);height:calc(var(--r) * 2);margin:calc(var(--r) * -1) 0 0 calc(var(--r) * -1);border-radius:50%;
- background:radial-gradient(circle,var(--red) 0 8%,#0d0d0f 8% 10%,var(--paper) 10% 11%,#0d0d0f 11% 61%,#232327 61% 62%,#0d0d0f 62% 91%,var(--red) 91% 95%,#0d0d0f 95%);
+ background:radial-gradient(circle,var(--accent) 0 8%,#0d0d0f 8% 10%,var(--paper) 10% 11%,#0d0d0f 11% 61%,#232327 61% 62%,#0d0d0f 62% 91%,var(--accent) 91% 95%,#0d0d0f 95%);
  box-shadow:0 0 0 4px var(--paper),0 0 0 9px #0d0d0f,0 20px 80px #000}
 .wheel-disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(var(--paper) 0 1.2deg,transparent 1.2deg 11.25deg);
  -webkit-mask:radial-gradient(circle,transparent 0 84%,#000 84% 89%,transparent 89%);mask:radial-gradient(circle,transparent 0 84%,#000 84% 89%,transparent 89%);opacity:.55}
 .wheel-marker{position:absolute;left:calc(var(--r) * .24);top:50%;width:calc(var(--r) * 1.02);height:calc(var(--font) * 1.35);transform:translateY(-50%);transform-origin:left center;
  filter:drop-shadow(8px 7px 0 #000);animation:wheel-marker .45s var(--spin) both}
-.wheel-marker i{position:absolute;inset:0;background:var(--red);clip-path:polygon(0 16%,62% 4%,100% 0,95% 52%,100% 100%,40% 90%,3% 84%,1% 48%)}
+.wheel-marker i{position:absolute;inset:0;background:var(--accent);clip-path:polygon(0 16%,62% 4%,100% 0,95% 52%,100% 100%,40% 90%,3% 84%,1% 48%)}
 .wheel-label{position:absolute;left:0;top:0;transform-origin:0 0;transform:rotate(calc(var(--i) * 34deg)) translate(calc(var(--r) * .3),-50%);
  font:400 var(--font)/1 Anton,Impact,"Arial Narrow",sans-serif;letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;pointer-events:auto;
  opacity:calc(1 - var(--d) * .28);transition:opacity .4s}
@@ -56,8 +56,8 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .wheel-label:focus-visible{outline:none}
 .wheel-label:focus-visible span{outline:2px solid var(--paper);outline-offset:4px}
 .wheel-tag{position:absolute;left:calc(var(--r) * .56);top:calc(50% + var(--font) * .6);max-width:calc(100% - var(--r) * .56 - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
- padding:6px 12px 6px 10px;background:#000;border-left:4px solid var(--red);color:#fff;font:700 13px/1.2 Arial,sans-serif;transform:rotate(-3deg) skewX(-12deg);transform-origin:left;animation:wheel-tag .35s var(--spin) both}
-.wheel-tag b{margin-right:8px;color:var(--red);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+ padding:6px 12px 6px 10px;background:#000;border-left:4px solid var(--accent);color:#fff;font:700 13px/1.2 Arial,sans-serif;transform:rotate(-3deg) skewX(-12deg);transform-origin:left;animation:wheel-tag .35s var(--spin) both}
+.wheel-tag b{margin-right:8px;color:var(--accent);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 @keyframes wheel-pop{0%{transform:skewX(-10deg) scale(.74) rotate(-5deg)}55%{transform:skewX(-14deg) scale(1.2) rotate(2deg)}100%{transform:skewX(-10deg) scale(1.06)}}
 @keyframes wheel-marker{0%{transform:translateY(-50%) scaleX(.15);opacity:0}60%{transform:translateY(-50%) scaleX(1.06);opacity:1}100%{transform:translateY(-50%) scaleX(1)}}
 @keyframes wheel-tag{0%{transform:rotate(-3deg) skewX(-12deg) translateX(-24px);opacity:0}100%{transform:rotate(-3deg) skewX(-12deg);opacity:1}}
