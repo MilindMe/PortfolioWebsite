@@ -187,3 +187,33 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* Phones (PHONE in src/layout.js): the page is always laid out landscape, as a size container so its own units (cqw,
+   cqh) stand in for vw and vh. Held upright it is turned a quarter turn clockwise, so the PSP stands on its side. */
+.page.phone{container-type:size}
+@media (orientation: portrait){
+  .page.phone{position:fixed;left:0;top:0;width:100svh;height:100vw;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
+}
+.page.phone .theme-prompt{bottom:max(10px,4cqh);font-size:clamp(10px,1.6cqw,15px);letter-spacing:.24em}
+.page.phone .p5-card-slash{height:max(60px,17cqh)}
+.page.phone .p5-card-title{bottom:calc(9% + max(60px,17cqh) / 2);font-size:max(30px,9cqh)}
+.page.phone .gta-bar{height:11cqh}
+.page.phone .gta-subtitle{bottom:calc(11cqh + 10px);font-size:clamp(14px,2.6cqw,26px)}
+/* The strip beside the PSP is slim: Choose Class keeps the classes and leaves the loadout to the PSP's screen. */
+.page.phone .class-select{padding:0 10px;font-size:13px}
+.page.phone .class-panel{gap:8px}
+.page.phone .class-panel h2,.page.phone .class-progress{margin-right:0}
+.page.phone .class-panel h2{font-size:20px}
+.page.phone .class-progress b{font-size:13px}
+.page.phone .class-list button{font-size:15px;padding:3px 0}
+.page.phone .class-loadout{display:none}
+/* Recommends the desktop site, once per visit (PhoneNotice). */
+.phone-notice{width:min(340px,calc(100vw - 32px));padding:24px 22px 20px;border:1px solid #bbc7a640;border-radius:18px;background:#1d3028;color:#e8e4d2;
+  box-shadow:0 18px 50px #000a;text-align:center;font-size:15px;line-height:1.45}
+.phone-notice::backdrop{background:#030504b3;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.phone-notice-icon{width:40px;height:40px;color:#d8be91}
+.phone-notice h2{margin:8px 0 10px;font:400 17px/1.3 Michroma,"Arial Black",sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.phone-notice p{margin:0 0 12px;color:#c9d0c3}
+.phone-notice-turn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:#0f1d16;text-align:left}
+.phone-notice-turn svg{flex:none;width:26px;height:26px;color:#d8be91;animation:phone-turn 2.6s ease-in-out infinite}
+.phone-notice button{width:100%;margin-top:6px;padding:12px;border-radius:12px;background:#d8be91;color:#14201a;font-weight:700}
+@keyframes phone-turn{0%,20%{transform:none}45%,75%{transform:rotate(-90deg)}100%{transform:none}}

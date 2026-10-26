@@ -6,7 +6,8 @@ import {START, initialXmb, xmbLink, xmbReducer} from './xmb/state';
 import XmbA11y from './xmb/XmbA11y';
 import {experiences, saveTheme, themeExperience} from './xmb/themes';
 import PageWheel from './PageWheel';
-import {ROTATION_LOCKED} from './layout';
+import {PHONE, ROTATION_LOCKED} from './layout';
+import PhoneNotice from './PhoneNotice';
 import {preloadModel} from './modelAsset';
 import {DURATION, WHEEL_AT} from './experiences/transitions';
 import Persona5Backdrop from './experiences/persona5/Persona5Backdrop';
@@ -94,7 +95,7 @@ export default function App() {
   const mode = lightingModes.find(mode => mode.id === lightMode);
   const Wheel = wheels[experience.wheel], CutIn = cutIns[experience.id];
   return <div className="app-shell memories-page">
-    <main className={`page experience-${experience.id}${ROTATION_LOCKED ? ' rotation-locked' : ''}`} aria-label="Memories — interactive PSP" inert={splash}>
+    <main className={`page experience-${experience.id}${ROTATION_LOCKED ? ' rotation-locked' : ''}${PHONE ? ' phone' : ''}`} aria-label="Memories — interactive PSP" inert={splash}>
       <div className="scene">
         <SceneBoundary key={attempt} onError={reportError}>
           <Suspense fallback={null}>
@@ -112,15 +113,19 @@ export default function App() {
       <XmbA11y state={xmb} />
       {status === 'error' && <button className="scene-status retry" onClick={retry} aria-label="Unable to load the PSP. Retry" title="Unable to load the PSP. Retry"><RefreshCw size={24} /></button>}
       {!ROTATION_LOCKED && <button className="reset-view" onClick={() => setReset(value => value + 1)} aria-label="Reset camera view" title="Reset camera view"><RotateCcw size={17} strokeWidth={1.5} /></button>}
-      <button className="light-toggle" popoverTarget="scene-light-panel" aria-label={`Lighting: ${mode.label}. Adjust lighting`} title="Adjust lighting"><Sun size={18} strokeWidth={1.5} /></button>
-      <div id="scene-light-panel" className="light-panel" popover="auto">
-        <div className="light-slider-layout">
-          <input type="range" min="0" max="2" step="1" value={lightingModes.indexOf(mode)} onChange={event => setLightMode(lightingModes[Number(event.target.value)].id)} aria-label="Scene lighting mode" aria-valuetext={mode.label} aria-orientation="vertical" list="light-mode-stops" />
-          <datalist id="light-mode-stops"><option value="0" /><option value="1" /><option value="2" /></datalist>
-          <div className="light-stop-labels" aria-hidden="true">{[...lightingModes].reverse().map(mode => <span key={mode.id}>{mode.label}</span>)}</div>
+      {/* The lighting popover opens in the top layer, outside the phone layout's page turn, so phones go without it. */}
+      {!PHONE && <>
+        <button className="light-toggle" popoverTarget="scene-light-panel" aria-label={`Lighting: ${mode.label}. Adjust lighting`} title="Adjust lighting"><Sun size={18} strokeWidth={1.5} /></button>
+        <div id="scene-light-panel" className="light-panel" popover="auto">
+          <div className="light-slider-layout">
+            <input type="range" min="0" max="2" step="1" value={lightingModes.indexOf(mode)} onChange={event => setLightMode(lightingModes[Number(event.target.value)].id)} aria-label="Scene lighting mode" aria-valuetext={mode.label} aria-orientation="vertical" list="light-mode-stops" />
+            <datalist id="light-mode-stops"><option value="0" /><option value="1" /><option value="2" /></datalist>
+            <div className="light-stop-labels" aria-hidden="true">{[...lightingModes].reverse().map(mode => <span key={mode.id}>{mode.label}</span>)}</div>
+          </div>
         </div>
-      </div>
+      </>}
     </main>
     {splash && <LoadingScreen progress={progress} />}
+    {PHONE && <PhoneNotice />}
   </div>;
 }

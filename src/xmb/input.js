@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {SCREEN_W, SCREEN_H} from './XmbRenderer';
-import {ROTATION_LOCKED} from '../layout';
+import {ROTATION_LOCKED, localDelta, localPoint} from '../layout';
 
 const keys={
  ArrowLeft:'LEFT',a:'LEFT',ArrowRight:'RIGHT',d:'RIGHT',ArrowUp:'UP',w:'UP',ArrowDown:'DOWN',s:'DOWN',
@@ -21,8 +21,8 @@ export function attachScreenInput({element,camera,controls,model,screen,xmb,act,
  const raycaster=new THREE.Raycaster(), pointer=new THREE.Vector2();
  let gesture=null, hoverFrame=0;
  function pick(event){
-  const rect=element.getBoundingClientRect();
-  pointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
+  const {x,y}=localPoint(element,event.clientX,event.clientY);
+  pointer.set(x*2-1,-y*2+1);
   raycaster.setFromCamera(pointer,camera);
   const hit=raycaster.intersectObject(model,true)[0];
   if(!hit)return null;
@@ -61,7 +61,7 @@ export function attachScreenInput({element,camera,controls,model,screen,xmb,act,
  }
  function up(event){
   if(event.pointerId!==gesture?.id){if(!controls.enabled&&event.isPrimary)controls.enabled=true;return;}
-  const dx=event.clientX-gesture.clientX, dy=event.clientY-gesture.clientY, distance=Math.max(Math.abs(dx),Math.abs(dy));
+  const {dx,dy}=localDelta(event.clientX-gesture.clientX,event.clientY-gesture.clientY), distance=Math.max(Math.abs(dx),Math.abs(dy));
   if(gesture.page){if(Math.abs(dy)>24&&Math.abs(dy)>Math.abs(dx))act({type:dy<0?'NEXT':'PREV'});}
   else if(distance<6){const action=xmb.hitTest(gesture.x,gesture.y);if(action)act(action,gesture.point);}
   else if(distance>24)act({type:Math.abs(dx)>Math.abs(dy)?(dx<0?'RIGHT':'LEFT'):(dy<0?'DOWN':'UP')},gesture.point);
