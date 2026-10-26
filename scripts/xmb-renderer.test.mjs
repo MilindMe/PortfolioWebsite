@@ -33,7 +33,7 @@ function renderer(t,reduced=false){
  const xmb=new XmbRenderer({matches:reduced});
  xmb.poke=()=>{xmb.activeUntil=Infinity;};
  xmb.boot(-10000);
- const state={cat:0,item:xmb.shown.items.map(()=>0),view:'menu',scroll:0,link:0,theme:'crimson'};
+ const state={cat:0,item:xmb.shown.items.map(()=>0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',unlocked:true};
  xmb.setState(state);xmb.tick(1000);return {xmb,state};
 }
 
@@ -100,5 +100,32 @@ for(const reduced of [false,true])test(`view changes replace the outgoing screen
   assert.equal(detailAlpha,view==='detail'?1:undefined,`outgoing detail visible in ${view}`);
   assert.equal(photoAlpha,view==='photo'?1:undefined,`outgoing photo visible in ${view}`);
  }
+ xmb.dispose();
+});
+
+test('the Persona 5 skin still draws every label and records the same hit areas',t=>{
+ const {xmb}=renderer(t);
+ xmb.out.events=[];xmb.draw(2,99,true);
+ const labels=xmb.out.events, hits=xmb.hits.map(({x,y,w,h})=>[x,y,w,h]);
+ xmb.setSkin('persona5');
+ xmb.out.events=[];xmb.draw(2,99,true);
+ assert.deepEqual(xmb.hits.map(({x,y,w,h})=>[x,y,w,h]),hits);
+ // Same text, set in capitals; the status bar's clock is the one string the skin leaves alone.
+ assert.deepEqual(xmb.out.events.map(text=>text.toUpperCase()),labels.map(text=>text.toUpperCase()));
+ assert(xmb.out.events.filter(text=>text!==text.toUpperCase()).length<=1,JSON.stringify(xmb.out.events));
+ xmb.dispose();
+});
+
+for(const skin of ['gta','bo2'])test(`the ${skin} skin keeps the PSP skin's hit areas and item labels`,t=>{
+ const {xmb}=renderer(t);
+ // The bo2 backdrop asks for its image; nothing loads under Node.
+ const previous=globalThis.Image;globalThis.Image=class {};t.after(()=>{globalThis.Image=previous;});
+ xmb.out.events=[];xmb.draw(2,99,true);
+ const labels=xmb.out.events, hits=xmb.hits.map(({x,y,w,h})=>[x,y,w,h]);
+ xmb.setSkin(skin);
+ xmb.out.events=[];xmb.draw(2,99,true);
+ assert.deepEqual(xmb.hits.map(({x,y,w,h})=>[x,y,w,h]),hits);
+ // Black Ops sets category names in capitals; everything else is word for word.
+ assert.deepEqual(xmb.out.events.map(text=>text.toUpperCase()),labels.map(text=>text.toUpperCase()));
  xmb.dispose();
 });
