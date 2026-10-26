@@ -24,7 +24,7 @@ const views={menu:'Browsing',detail:'Reading',photo:'Viewing'};
 // A Persona 5–style half wheel of the XMB's pages, pinned to the left edge. It spins the current page to the
 // pointer and pops it; the tag underneath follows the focused item. Clicking a page jumps the PSP there.
 export default function PageWheel({state,onSelect}){
- const box=useWheelBox(), radius=.92*Math.min(box.height*.4,box.width*.8), item=currentItem(state);
+ const box=useWheelBox(), radius=.8*Math.min(box.height*.4,box.width*.8), item=currentItem(state);
  const style={width:box.width,height:box.height,'--r':`${radius}px`,'--font':`${Math.round(radius*.19)}px`,'--active':state.cat,'--accent':themeColors(state.theme)[0]};
  return <nav className="page-wheel" aria-label="Pages" style={style}>
   <div className="wheel-disc" aria-hidden="true"/>

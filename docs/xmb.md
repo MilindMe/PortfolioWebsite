@@ -149,7 +149,7 @@ const FILL_WIDTH=.9, FILL_HEIGHT=.72, PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 ```
 
 - **Free area**: `stageInsets()` in `src/layout.js` reserves a strip of the page for the wheel. The PSP is framed in the rest.
-  - **Wide screens (760 px and up)**: the strip is on the left, 36% of the width up to 520 px.
+  - **Wide screens (760 px and up)**: the strip is on the left, 28% of the width up to 400 px.
   - **Narrow screens**: the strip is everything above a band just tall enough for the PSP.
 - **View offset**: the WebGL canvas still covers the whole page. `camera.setViewOffset(w, h, -left/2, -top/2, w, h)` slides the picture so the PSP is centred in the free area. Raycasting takes the offset into account automatically, because it is part of the projection matrix.
 - **`resetView()`**: places the camera so the PSP spans `FILL_WIDTH` of the free area's width, capped so it never takes more than `FILL_HEIGHT` of its height. Raise these values to make the PSP bigger.
@@ -218,7 +218,7 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
   - The marker is remounted with `key` so its `wheel-marker` animation replays.
   - The black tag under the marker shows the view (Browsing / Reading / Viewing) and the focused item, and slides in again when either changes.
 - **Clicking a label** dispatches `GOTO`, which closes any open detail or photo and moves the XMB to that page.
-- **Sizes**: the wheel fills the strip from `stageInsets()`. Its radius is `0.92 × min(height × 0.4, width × 0.8)`, and everything else scales from the CSS variables `--r` and `--font`.
+- **Sizes**: the wheel fills the strip from `stageInsets()`. Its radius is `0.8 × min(height × 0.4, width × 0.8)`, and everything else scales from the CSS variables `--r` and `--font`.
 - **Animation cost**: only transforms and opacity are animated. The global reduced-motion rule turns the animations off.
 - **Accessibility**: the wheel is a `<nav aria-label="Pages">` of real buttons, with `aria-current="page"` on the active one. Labels more than two steps away are hidden, so they can't be clicked until the wheel turns closer.
 
