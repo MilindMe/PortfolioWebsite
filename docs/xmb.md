@@ -104,7 +104,7 @@ Each frame composites cached layers and animated highlights into the texture can
 
 ### Animation
 
-- `tick(now)` eases every displayed value toward its target with exponential smoothing (`1 - exp(-dt/0.07)`, about 250 ms to settle). Values tracked: category position, each category's item position, detail and photo opacity, and scroll.
+- `tick(now)` eases every displayed value toward its target with exponential smoothing (`1 - exp(-dt/0.07)`, about 250 ms to settle). Values tracked: category position, each category's item position, and scroll. Opening/closing detail and photo views switches in one rendered frame, without cross-fading the outgoing view underneath the new one.
 - **Boot**: `boot(at)` is called 250 ms after the model loads. Before that the screen is black. The background then fades in over 0.8 s and the menu follows.
 - **Frame budget**: `tick()` gates itself. It redraws every 32 ms (~30 fps) while something is easing or for 4 s after any `setState`/`setHover` (`poke()`), and otherwise every 80 ms (~12 fps) for the idle waves (`ACTIVE_FRAME`, `IDLE_FRAME`, `ACTIVE_FOR`).
 - **Reduced motion**: with `prefers-reduced-motion`, easing is instant, the waves freeze, and the canvas only redraws when the state or the clock's minute changes.

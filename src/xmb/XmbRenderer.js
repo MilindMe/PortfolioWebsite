@@ -86,8 +86,10 @@ export class XmbRenderer{
   };
   ease(shown,'cat',state.cat);
   state.item.forEach((target,i)=>ease(shown.items,i,target));
-  ease(shown,'detail',state.view==='detail'?1:0);
-  ease(shown,'photo',state.view==='photo'?1:0);
+  // View changes are replacements, not cross-fades: never show the old menu
+  // behind a newly opened page (or the old page over the returning menu).
+  shown.detail=state.view==='detail'?1:0;
+  shown.photo=state.view==='photo'?1:0;
   ease(shown,'scroll',state.scroll);
   // Theme changes cross-fade the backdrop colours.
   const [top,bottom]=themeColors(state.theme).map(rgb);

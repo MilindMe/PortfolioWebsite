@@ -85,3 +85,20 @@ test('photo overlays also cover the outgoing menu pulse',t=>{
  assert(xmb.out.events.indexOf('outgoing menu')<xmb.out.events.indexOf('photo page'));
  xmb.dispose();
 });
+
+for(const reduced of [false,true])test(`view changes replace the outgoing screen in one frame (reduced motion: ${reduced})`,t=>{
+ const {xmb,state}=renderer(t,reduced);let now=1000,menuAlpha,detailAlpha,photoAlpha;
+ xmb.menu=alpha=>{menuAlpha=alpha;};
+ xmb.detail=alpha=>{detailAlpha=alpha;};
+ xmb.photoView=alpha=>{photoAlpha=alpha;};
+ for(const view of ['detail','menu','photo','menu','detail','photo','menu']){
+  menuAlpha=detailAlpha=photoAlpha=undefined;
+  xmb.setState({...state,view});xmb.tick(now+=33);
+  assert.equal(xmb.shown.detail,view==='detail'?1:0);
+  assert.equal(xmb.shown.photo,view==='photo'?1:0);
+  assert.equal(menuAlpha,view==='menu'?1:0,`outgoing menu visible in ${view}`);
+  assert.equal(detailAlpha,view==='detail'?1:undefined,`outgoing detail visible in ${view}`);
+  assert.equal(photoAlpha,view==='photo'?1:undefined,`outgoing photo visible in ${view}`);
+ }
+ xmb.dispose();
+});
