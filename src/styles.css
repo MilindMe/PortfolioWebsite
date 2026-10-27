@@ -1,3 +1,7 @@
+/* Anton (SIL OFL), Latin subset, self-hosted for the page wheel; preloaded in index.html. */
+/* Michroma (SIL OFL), Latin subset, self-hosted for the theme prompt; a wide geometric face like the PlayStation wordmark. */
+@font-face { font-family: Michroma; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/michroma-latin.woff2') format('woff2'); }
+@font-face { font-family: Anton; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/anton-latin.woff2') format('woff2'); }
 :root { font-family: Arial, sans-serif; color: #e8e4d2; background: #080809; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; }
@@ -12,12 +16,10 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .reset-view:hover, .light-toggle:hover { background: #536250; }
 .scene-status { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #cdbb95; display: grid; place-items: center; width: 52px; height: 52px; }
 .retry { border: 1px solid #d7ceb433; border-radius: 50%; background: #20372bd9; }
-.memories-stage{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 43%,#29292e 0%,#111114 50%,#080809 100%);overflow:hidden}
-.memories-stage>canvas:not(.memory-dots){position:absolute;inset:0;z-index:2;cursor:grab;touch-action:pan-y}
+.memories-stage{position:absolute;inset:0;background:radial-gradient(ellipse at 62% 48%,#111113 0%,#070708 55%,#020202 100%);overflow:hidden}
+.memories-stage>canvas{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:none}
 .memories-stage>canvas:active{cursor:grabbing}
 .memories-stage>canvas:focus-visible{outline:1px solid #ddd;outline-offset:-8px}
-.memories-stage .memory-dots{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
-.memory-slash{position:absolute;left:-10%;bottom:8%;width:120%;height:12%;transform:rotate(-12deg);background:#ffffff05;border-top:1px solid #ffffff0b;border-bottom:1px solid #ffffff0b}
 .loading-screen{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:#303b33;color:#c7b58f;cursor:wait}
 .loading-screen svg{width:86px;height:158px;overflow:visible}
 .loading-outline{fill:none;stroke:#c7b58f;stroke-width:1.4}
@@ -32,20 +34,21 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .light-slider-layout input{writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;margin:0;accent-color:#d8a76d;cursor:pointer;touch-action:none}
 .light-stop-labels{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#b9c5b5;font-size:12px}
 .light-stop-labels span{height:18px;display:flex;align-items:center}
-.memories-stage.rotation-locked>canvas:not(.memory-dots),.memories-stage.rotation-locked>canvas:active{cursor:default}
+.memories-stage.rotation-locked>canvas,.memories-stage.rotation-locked>canvas:active{cursor:default}
 .page.rotation-locked .light-toggle{bottom:26px}
 .page.rotation-locked .light-panel{bottom:76px}
 /* Page wheel: Persona 5–style half wheel on the left (above the PSP on narrow screens). Sizes come from --r and --font. */
-.page-wheel{--red:#e8202a;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none}
+.page-wheel{--accent:#c8222c;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none;
+ transform-origin:0 50%;animation:wheel-enter .7s var(--spin) var(--delay,0ms) both}
 .wheel-disc,.wheel-spin{position:absolute;left:0;top:50%;transform:rotate(calc(var(--active) * -34deg));transition:transform .6s var(--spin)}
 .wheel-disc{width:calc(var(--r) * 2);height:calc(var(--r) * 2);margin:calc(var(--r) * -1) 0 0 calc(var(--r) * -1);border-radius:50%;
- background:radial-gradient(circle,var(--red) 0 8%,#0d0d0f 8% 10%,var(--paper) 10% 11%,#0d0d0f 11% 61%,#232327 61% 62%,#0d0d0f 62% 91%,var(--red) 91% 95%,#0d0d0f 95%);
+ background:radial-gradient(circle,var(--accent) 0 8%,#0d0d0f 8% 10%,var(--paper) 10% 11%,#0d0d0f 11% 61%,#232327 61% 62%,#0d0d0f 62% 91%,var(--accent) 91% 95%,#0d0d0f 95%);
  box-shadow:0 0 0 4px var(--paper),0 0 0 9px #0d0d0f,0 20px 80px #000}
 .wheel-disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(var(--paper) 0 1.2deg,transparent 1.2deg 11.25deg);
  -webkit-mask:radial-gradient(circle,transparent 0 84%,#000 84% 89%,transparent 89%);mask:radial-gradient(circle,transparent 0 84%,#000 84% 89%,transparent 89%);opacity:.55}
 .wheel-marker{position:absolute;left:calc(var(--r) * .24);top:50%;width:calc(var(--r) * 1.02);height:calc(var(--font) * 1.35);transform:translateY(-50%);transform-origin:left center;
  filter:drop-shadow(8px 7px 0 #000);animation:wheel-marker .45s var(--spin) both}
-.wheel-marker i{position:absolute;inset:0;background:var(--red);clip-path:polygon(0 16%,62% 4%,100% 0,95% 52%,100% 100%,40% 90%,3% 84%,1% 48%)}
+.wheel-marker i{position:absolute;inset:0;background:var(--accent);clip-path:polygon(0 16%,62% 4%,100% 0,95% 52%,100% 100%,40% 90%,3% 84%,1% 48%)}
 .wheel-label{position:absolute;left:0;top:0;transform-origin:0 0;transform:rotate(calc(var(--i) * 34deg)) translate(calc(var(--r) * .3),-50%);
  font:400 var(--font)/1 Anton,Impact,"Arial Narrow",sans-serif;letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;pointer-events:auto;
  opacity:calc(1 - var(--d) * .28);transition:opacity .4s}
@@ -56,11 +59,118 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .wheel-label:focus-visible{outline:none}
 .wheel-label:focus-visible span{outline:2px solid var(--paper);outline-offset:4px}
 .wheel-tag{position:absolute;left:calc(var(--r) * .56);top:calc(50% + var(--font) * .6);max-width:calc(100% - var(--r) * .56 - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
- padding:6px 12px 6px 10px;background:#000;border-left:4px solid var(--red);color:#fff;font:700 13px/1.2 Arial,sans-serif;transform:rotate(-3deg) skewX(-12deg);transform-origin:left;animation:wheel-tag .35s var(--spin) both}
-.wheel-tag b{margin-right:8px;color:var(--red);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+ padding:6px 12px 6px 10px;background:#000;border-left:4px solid var(--accent);color:#fff;font:700 13px/1.2 Arial,sans-serif;transform:rotate(-3deg) skewX(-12deg);transform-origin:left;animation:wheel-tag .35s var(--spin) both}
+.wheel-tag b{margin-right:8px;color:var(--accent);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 @keyframes wheel-pop{0%{transform:skewX(-10deg) scale(.74) rotate(-5deg)}55%{transform:skewX(-14deg) scale(1.2) rotate(2deg)}100%{transform:skewX(-10deg) scale(1.06)}}
 @keyframes wheel-marker{0%{transform:translateY(-50%) scaleX(.15);opacity:0}60%{transform:translateY(-50%) scaleX(1.06);opacity:1}100%{transform:translateY(-50%) scaleX(1)}}
+@keyframes wheel-enter{0%{transform:translateX(-55%) rotate(-28deg) scale(.55);opacity:0}100%{transform:none;opacity:1}}
 @keyframes wheel-tag{0%{transform:rotate(-3deg) skewX(-12deg) translateX(-24px);opacity:0}100%{transform:rotate(-3deg) skewX(-12deg);opacity:1}}
+/* Shown under the PSP until a theme is picked. */
+.theme-prompt{position:absolute;z-index:3;left:16px;right:16px;bottom:max(22px,7vh);margin:0;text-align:center;pointer-events:none;
+ font:400 clamp(13px,1.7vw,20px)/1.4 Michroma,"Arial Black",sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#e8e4d2;
+ text-shadow:0 0 18px #ffffff40;animation:theme-prompt 2.4s ease-in-out infinite;transition:opacity .5s,transform .5s}
+.theme-prompt.done{opacity:0;transform:translateY(12px);animation:none}
+@keyframes theme-prompt{0%,100%{opacity:.55}50%{opacity:1}}
+/* Persona 5 experience: the page behind the PSP (Persona5Backdrop) and the calling-card cut-in (CallingCard). */
+.p5-backdrop{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s;
+ background:radial-gradient(ellipse at 34% 42%,#f0242a 0%,#b3070e 55%,#3a0003 100%)}
+.p5-backdrop.active{opacity:1;visibility:visible;transition:opacity .6s .5s}
+.p5-backdrop:not(.active) *{animation-play-state:paused}
+.p5-backdrop::before{content:"";position:absolute;inset:0;background:radial-gradient(#000b 1.6px,transparent 2.2px) 0 0/14px 14px;
+ -webkit-mask:linear-gradient(155deg,#000 0%,transparent 48%);mask:linear-gradient(155deg,#000 0%,transparent 48%);opacity:.7}
+.p5-backdrop::after{content:"";position:absolute;inset:-20%;
+ background:linear-gradient(112deg,transparent 0 56%,#000 56% 64%,transparent 64% 65.6%,#f4f1ea 65.6% 66.3%,transparent 66.3% 68%,#000 68% 70%,transparent 70%)}
+.p5-piece{position:absolute;z-index:1;left:var(--x);top:var(--y);width:var(--s);aspect-ratio:1;background:#000;animation:p5-drift var(--t) ease-in-out var(--delay) infinite alternate}
+.p5-piece.star{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.p5-piece.shard{background:#f4f1ea;clip-path:polygon(0 8%,100% 0,62% 100%);opacity:.85}
+@keyframes p5-drift{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(18px,-34px) rotate(calc(var(--r)))}}
+.p5-card{position:fixed;inset:0;z-index:5;pointer-events:none;overflow:hidden;animation:p5-card 1.25s cubic-bezier(.6,0,.3,1) both}
+.p5-card-slash{position:absolute;left:-20%;right:-20%;bottom:9%;height:max(90px,17vh);background:#000;transform:rotate(-7deg);
+ box-shadow:0 0 0 5px #f4f1ea,0 0 0 11px #e5191c;animation:p5-slash 1.25s cubic-bezier(.7,0,.2,1) both}
+.p5-card-title{position:absolute;left:0;right:0;bottom:calc(9% + max(90px,17vh) / 2);transform:translateY(50%) rotate(-7deg);text-align:center;
+ font:400 max(46px,9vh)/1 Anton,Impact,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#f4f1ea;animation:p5-title 1.25s cubic-bezier(.3,1.45,.5,1) both}
+.p5-card-title span{display:inline-block;padding:0 .12em;transform:rotate(-4deg)}
+.p5-card-title span:nth-child(2){background:#e5191c;color:#000;transform:rotate(5deg) scale(.85)}
+@keyframes p5-card{0%,82%{opacity:1}100%{opacity:0}}
+@keyframes p5-slash{0%{transform:rotate(-7deg) translateX(-110%)}22%,72%{transform:rotate(-7deg) translateX(0)}100%{transform:rotate(-7deg) translateX(110%)}}
+@keyframes p5-title{0%,14%{opacity:0;scale:1.8}30%,72%{opacity:1;scale:1}86%,100%{opacity:0;scale:.9}}
+/* GTA experience: Vice City backdrop (GtaBackdrop), the weapon wheel (WeaponWheel) and the cutscene (GtaCutscene). */
+.gta-backdrop{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s;background:#0b6f8f center/cover no-repeat}
+.gta-backdrop.used{background-image:linear-gradient(90deg,#000000a6,#00000040 30%,#0000 50%),url('/experiences/gta/vice-city.jpg')}
+.gta-backdrop.active{opacity:1;visibility:visible;transition:opacity .6s .5s}
+.weapon-wheel{position:absolute;z-index:3;left:0;top:0;display:grid;place-items:center;pointer-events:none}
+.weapon-ring{position:relative;width:var(--size);height:var(--size);animation:weapon-in .55s cubic-bezier(.3,1.35,.5,1) var(--delay,0ms) both}
+.weapon-ring::before{content:"";position:absolute;inset:2%;border-radius:50%;background:#d8d8dc59;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.weapon-ring>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 10px 30px #0008)}
+.weapon-rim{fill:none;stroke:#2b2b2fcc;stroke-width:3}
+.weapon-sector path{fill:#3c3c42e0;stroke:#e6e6e680;stroke-width:.6;transform-box:view-box;transform-origin:50% 50%;transition:fill .25s,transform .3s cubic-bezier(.3,1.5,.5,1)}
+.weapon-sector.active path{fill:#b5dcebe6;transform:scale(1.035)}
+.weapon-sector path.weapon-arc{fill:none;stroke:#3fa9e0;stroke-width:4;stroke-linecap:butt}
+.weapon-slot{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:2px;pointer-events:auto;width:calc(var(--size) * .2);
+ color:#f5f5f5;font:400 calc(var(--size) * .052)/1 Anton,Impact,"Arial Narrow",sans-serif;letter-spacing:.02em;
+ text-shadow:-1px -1px 0 #111,1px -1px 0 #111,-1px 1px 0 #111,1px 1px 0 #111,0 2px 4px #0009}
+.weapon-slot svg{width:calc(var(--size) * .1);height:calc(var(--size) * .1);filter:drop-shadow(1px 1px 0 #111) drop-shadow(-1px -1px 0 #111)}
+.weapon-slot.active{color:#fff;transform:translate(-50%,-50%) scale(1.12);transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+.weapon-slot.active svg{color:#14354a;filter:none}
+.weapon-slot:focus-visible{outline:2px solid #3fa9e0;outline-offset:4px;border-radius:6px}
+.weapon-hub{position:absolute;left:50%;top:50%;width:calc(var(--size) * .5);transform:translate(-50%,-50%);display:grid;justify-items:center;gap:calc(var(--size) * .015);text-align:center;
+ color:#fff;font:400 calc(var(--size) * .062)/1.05 Anton,Impact,"Arial Narrow",sans-serif;text-shadow:-1px -1px 0 #111,1px -1px 0 #111,-1px 1px 0 #111,1px 1px 0 #111;animation:weapon-hub .3s ease-out both}
+.weapon-count{display:flex;align-items:center;gap:.25em;font-size:.9em}
+.weapon-count button{display:grid;place-items:center;pointer-events:auto;color:#3fa9e0;filter:drop-shadow(1px 1px 0 #111) drop-shadow(-1px -1px 0 #111)}
+.weapon-count svg{width:1.1em;height:1.1em}
+.weapon-hub small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.62em}
+@keyframes weapon-in{0%{transform:scale(.4) rotate(-50deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes weapon-hub{0%{opacity:0;transform:translate(-50%,-50%) scale(.9)}100%{opacity:1;transform:translate(-50%,-50%)}}
+.gta-cutscene{position:fixed;inset:0;z-index:5;pointer-events:none;animation:gta-cutscene 3.6s linear both}
+.gta-bar{position:absolute;left:0;right:0;height:11vh;background:#000;animation:gta-bar 3.6s ease-in-out both}
+.gta-bar.top{top:0;--from:-100%}
+.gta-bar.bottom{bottom:0;--from:100%}
+.gta-subtitle{position:absolute;left:16px;right:16px;bottom:calc(11vh + 18px);margin:0;text-align:center;color:#fff;
+ font:700 clamp(18px,2.6vw,36px)/1.25 "Arial Rounded MT Bold","Arial Black",Arial,sans-serif;letter-spacing:.03em;
+ -webkit-text-stroke:.2em #000;paint-order:stroke fill;animation:gta-subtitle 3.6s linear both}
+@keyframes gta-cutscene{0%,96%{opacity:1}100%{opacity:0}}
+@keyframes gta-bar{0%{transform:translateY(var(--from))}12%,88%{transform:none}100%{transform:translateY(var(--from))}}
+@keyframes gta-subtitle{0%,14%{opacity:0}18%,84%{opacity:1}88%,100%{opacity:0}}
+/* Black Ops II experience: key art backdrop (Bo2Backdrop) and the Choose Class panel (ClassSelect). */
+.bo2-backdrop{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s;background:#0b0c0d 70% 0/cover no-repeat}
+.bo2-backdrop.used{background-image:linear-gradient(90deg,#000000d9,#0000008c 32%,#0000 60%),url('/experiences/bo2/black-ops-2.jpg')}
+.bo2-backdrop.active{opacity:1;visibility:visible;transition:opacity .6s .5s}
+.class-select{--orange:#f47b20;position:absolute;z-index:3;left:0;top:0;display:flex;align-items:center;padding:0 clamp(16px,3vw,44px);pointer-events:none;
+ font:600 15px/1.2 "Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;color:#f2f2f2;text-shadow:0 1px 2px #000}
+.class-panel{width:100%;max-height:100%;display:grid;gap:14px;pointer-events:auto;animation:class-in .5s cubic-bezier(.2,.8,.2,1) var(--delay,0ms) both}
+.class-panel h2{margin:0;font:400 clamp(26px,2.6vw,38px)/1 Anton,Impact,"Arial Narrow",sans-serif;letter-spacing:.02em;text-transform:uppercase}
+.class-progress{display:flex;align-items:center;gap:4px}
+.class-progress i{flex:1;height:7px;background:#f47b2033;transition:background .3s}
+.class-progress i.on{background:var(--orange)}
+.class-progress b{margin-left:8px;color:var(--orange);font-size:17px}
+.class-list,.class-loadout{margin:0;padding:0;list-style:none}
+.class-list button{display:block;padding:2px 0;font-size:clamp(16px,1.45vw,21px);letter-spacing:.01em;transition:color .15s}
+.class-list button:hover{color:#ffb070}
+.class-list button.active{color:var(--orange)}
+.class-loadout{display:grid;gap:6px;border-top:1px solid #ffffff26;padding-top:12px;animation:class-loadout .3s ease-out both}
+.class-loadout button{width:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;column-gap:12px;align-items:center;text-align:left;
+ padding:6px 8px;border-left:3px solid transparent;background:#00000059;transition:background .15s,border-color .15s}
+.class-loadout button:hover{background:#ffffff14}
+.class-loadout button.active{border-left-color:var(--orange);background:#f47b2026}
+.class-loadout small{grid-column:1;color:#b8b8b8;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.class-loadout span{grid-column:1;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.class-loadout i{grid-column:2;grid-row:1/3;width:38px;height:38px;display:grid;place-items:center;border-radius:9px;background:linear-gradient(135deg,#2e6b6f,#173538);
+ box-shadow:inset 0 0 0 1px #ffffff26}
+.class-loadout button.active i{background:linear-gradient(135deg,#f47b20,#8a3a07)}
+.class-loadout svg{width:22px;height:22px}
+.class-back{justify-self:start;font-size:14px}
+.class-back b{color:var(--orange);margin-right:4px}
+.class-select button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+/* Above the PSP on narrow screens the strip is wide and short: classes on the left, loadout on the right. */
+.class-select.wide .class-panel{grid-template-columns:auto 1fr;grid-template-rows:auto auto 1fr auto;column-gap:20px;gap:8px 20px}
+.class-select.wide .class-panel h2,.class-select.wide .class-progress{grid-column:1/3}
+.class-select.wide .class-loadout{border-top:0;padding-top:0;align-content:start}
+.class-select.wide .class-loadout small{display:none}
+.class-select.wide .class-loadout i{width:28px;height:28px}
+.class-select.wide .class-loadout svg{width:16px;height:16px}
+.class-select.wide .class-back{grid-column:1/3}
+@keyframes class-in{0%{transform:translateX(-30px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes class-loadout{0%{transform:translateX(10px);opacity:0}100%{transform:none;opacity:1}}
 @media (max-width: 700px) {
   .reset-view { right: 16px; bottom: 18px; width: 36px; height: 36px; }
   .light-toggle { right: 16px; bottom: 64px; width: 36px; height: 36px; }
@@ -72,6 +182,8 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 @media (max-width: 759px) {
   .page.rotation-locked .light-toggle { top: 16px; bottom: auto; }
   .page.rotation-locked .light-panel { inset: 62px 14px auto auto; }
+  /* Keep Choose Class' title row clear of the lighting button now in this corner. */
+  .class-panel h2, .class-progress { margin-right: 48px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}

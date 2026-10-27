@@ -1,30 +1,16 @@
-import React, {useEffect, useState} from 'react';
+import React from 'react';
 import {categories} from './xmb/content';
 import {currentItem} from './xmb/state';
-import {stageInsets} from './layout';
+import {themeColors} from './xmb/themes';
+import {useWheelBox} from './useWheelBox';
 
-function readBox(){
- const {left,top}=stageInsets(innerWidth,innerHeight);
- return left?{width:left,height:innerHeight}:{width:innerWidth,height:top};
-}
-
-// The strip of the page that stageInsets reserves for the wheel.
-function useWheelBox(){
- const [box,setBox]=useState(readBox);
- useEffect(()=>{
-  const update=()=>setBox(readBox());
-  addEventListener('resize',update);
-  return ()=>removeEventListener('resize',update);
- },[]);
- return box;
-}
-
-const views={menu:'Browsing',detail:'Reading',photo:'Viewing'};
+export const views={menu:'Browsing',folder:'Browsing',detail:'Reading',photo:'Viewing'};
 // A Persona 5–style half wheel of the XMB's pages, pinned to the left edge. It spins the current page to the
 // pointer and pops it; the tag underneath follows the focused item. Clicking a page jumps the PSP there.
-export default function PageWheel({state,onSelect}){
- const box=useWheelBox(), radius=Math.min(box.height*.4,box.width*.8), item=currentItem(state);
- const style={width:box.width,height:box.height,'--r':`${radius}px`,'--font':`${Math.round(radius*.19)}px`,'--active':state.cat};
+// It swings in from the left edge when it mounts, after delay ms.
+export default function PageWheel({state,delay=0,onSelect}){
+ const box=useWheelBox(), radius=.8*Math.min(box.height*.4,box.width*.8), item=currentItem(state);
+ const style={width:box.width,height:box.height,'--r':`${radius}px`,'--font':`${Math.round(radius*.19)}px`,'--active':state.cat,'--accent':themeColors(state.theme)[0],'--delay':`${delay}ms`};
  return <nav className="page-wheel" aria-label="Pages" style={style}>
   <div className="wheel-disc" aria-hidden="true"/>
   <div className="wheel-marker" key={`marker-${state.cat}`} aria-hidden="true"><i/></div>

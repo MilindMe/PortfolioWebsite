@@ -21,14 +21,15 @@ export function createButtonGlow(model){
  for(const name of Object.keys(buttonActions)){
   const button=model.getObjectByName(name);
   if(!button)continue;
-  button.geometry.computeBoundingBox();
-  const {min,max}=button.geometry.boundingBox, pad=.08;
+  // The halo sits beside the button in its parent, so take the box through the node's transform.
+  button.geometry.computeBoundingBox();button.updateMatrix();
+  const {min,max}=button.geometry.boundingBox.clone().applyMatrix4(button.matrix), pad=.08;
   const material=new THREE.MeshBasicMaterial({map:texture,color:COLOR,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false});
   const halo=new THREE.Mesh(geometry,material);
   halo.scale.set(max.x-min.x+pad,max.y-min.y+pad,1);
   halo.position.set((min.x+max.x)/2,(min.y+max.y)/2,max.z+.002);
   halo.raycast=()=>{};
-  model.add(halo);halos.push({name,halo,material});
+  button.parent.add(halo);halos.push({name,halo,material});
  }
  let hovered=null;
  return {

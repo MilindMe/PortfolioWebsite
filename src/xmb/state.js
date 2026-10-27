@@ -1,14 +1,32 @@
 import {categories} from './content';
 import {savedTheme} from './themes';
 
-// view: 'menu' browses categories, 'detail' shows an item's write-up, 'photo' shows a memory full screen.
+export const SETTINGS=categories.findIndex(category=>category.id==='settings');
+// Where the visitor lands once they have picked a theme.
+export const START=categories.findIndex(category=>category.id==='about');
+
+// view: 'menu' browses categories, 'detail' shows an item's write-up, 'photo' shows a memory full screen and
+// 'folder' lists a folder item's contents, with sub the focused entry inside it.
 // item[] remembers the focused item in every category, like the real XMB. theme is the backdrop (see themes.js).
+// Every visit starts locked on Settings: only that category shows until a theme is picked, which sets unlocked.
+// The last theme used is focused, inside the Classics folder if it lives there.
 export function initialXmb(){
- return {cat:0, item:categories.map(()=>0), view:'menu', scroll:0, link:0, theme:savedTheme()};
+ const theme=savedTheme(), settings=categories[SETTINGS].items;
+ const inFolder=settings.findIndex(item=>item.folder?.some(entry=>entry.theme===theme));
+ const index=inFolder>=0?inFolder:Math.max(0,settings.findIndex(item=>item.theme===theme));
+ const item=categories.map(()=>0);item[SETTINGS]=index;
+ const sub=inFolder>=0?settings[inFolder].folder.findIndex(entry=>entry.theme===theme):0;
+ return {cat:SETTINGS, item, view:'menu', sub, scroll:0, link:0, theme, unlocked:false};
 }
 
 export function currentItem(state){
  return categories[state.cat].items[state.item[state.cat]];
+}
+
+// The item the visitor is on: a folder's focused entry while it is open, otherwise the current item.
+export function focusedEntry(state){
+ const item=currentItem(state);
+ return state.view==='folder'?item.folder[state.sub]:item;
 }
 
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
@@ -18,18 +36,24 @@ function withItem(state,index){
  return {...state,item};
 }
 
-// Actions: LEFT RIGHT UP DOWN CONFIRM BACK, FOCUS {cat, item?} from taps on the screen and GOTO {cat}.
-// DOWN carries maxScroll in the detail view because only the renderer knows how tall the text is.
+const applyTheme=(state,theme)=>({...state,theme,unlocked:true});
+
+// Actions: LEFT RIGHT UP DOWN CONFIRM BACK, FOCUS {cat, item?} (or {sub} in a folder) from taps on the screen and
+// GOTO {cat}. NEXT and PREV come from scrolling the page: they walk down a column and on into the next category (or
+// back up into the previous one's last item), scroll a detail page and step through photos and folders.
+// DOWN and NEXT carry maxScroll in the detail view because only the renderer knows how tall the text is.
 // CONFIRM may carry link (an index) when a link button is tapped directly, and applies a theme item's theme.
+// While locked, nothing leaves Settings.
 export function xmbReducer(state,action){
+ const locked=!state.unlocked;
  // GOTO jumps straight to a category from anywhere, e.g. from the page wheel.
- if(action.type==='GOTO')return {...state,view:'menu',cat:action.cat};
+ if(action.type==='GOTO')return locked&&action.cat!==SETTINGS?state:{...state,view:'menu',cat:action.cat};
  const items=categories[state.cat].items, focused=state.item[state.cat], item=items[focused];
  if(state.view==='detail'){
   const links=item.detail.links??[];
   switch(action.type){
-   case 'UP':return {...state,scroll:Math.max(0,state.scroll-1)};
-   case 'DOWN':return {...state,scroll:clamp(state.scroll+1,0,action.maxScroll??Infinity)};
+   case 'UP':case 'PREV':return {...state,scroll:Math.max(0,state.scroll-1)};
+   case 'DOWN':case 'NEXT':return {...state,scroll:clamp(state.scroll+1,0,action.maxScroll??Infinity)};
    case 'LEFT':return {...state,link:clamp(state.link-1,0,Math.max(0,links.length-1))};
    case 'RIGHT':return {...state,link:clamp(state.link+1,0,Math.max(0,links.length-1))};
    case 'CONFIRM':return action.link===undefined?state:{...state,link:action.link};
@@ -39,40 +63,64 @@ export function xmbReducer(state,action){
  }
  if(state.view==='photo'){
   switch(action.type){
-   case 'LEFT':case 'UP':return withItem(state,(focused-1+items.length)%items.length);
-   case 'RIGHT':case 'DOWN':return withItem(state,(focused+1)%items.length);
+   case 'LEFT':case 'UP':case 'PREV':return withItem(state,(focused-1+items.length)%items.length);
+   case 'RIGHT':case 'DOWN':case 'NEXT':return withItem(state,(focused+1)%items.length);
    case 'BACK':case 'CONFIRM':return {...state,view:'menu'};
    default:return state;
   }
  }
+ if(state.view==='folder'){
+  const last=item.folder.length-1;
+  switch(action.type){
+   case 'UP':case 'PREV':return {...state,sub:Math.max(0,state.sub-1)};
+   case 'DOWN':case 'NEXT':return {...state,sub:Math.min(last,state.sub+1)};
+   case 'FOCUS':return action.sub===undefined?state:{...state,sub:clamp(action.sub,0,last)};
+   case 'CONFIRM':{const entry=item.folder[state.sub];return entry.theme?applyTheme(state,entry.theme):state;}
+   case 'LEFT':case 'BACK':return {...state,view:'menu'};
+   default:return state;
+  }
+ }
  switch(action.type){
-  case 'LEFT':return {...state,cat:Math.max(0,state.cat-1)};
-  case 'RIGHT':return {...state,cat:Math.min(categories.length-1,state.cat+1)};
+  case 'LEFT':return locked?state:{...state,cat:Math.max(0,state.cat-1)};
+  case 'RIGHT':return locked?state:{...state,cat:Math.min(categories.length-1,state.cat+1)};
   case 'UP':return withItem(state,Math.max(0,focused-1));
   case 'DOWN':return withItem(state,Math.min(items.length-1,focused+1));
+  case 'NEXT':
+   if(focused<items.length-1)return withItem(state,focused+1);
+   return !locked&&state.cat<categories.length-1?withItem({...state,cat:state.cat+1},0):state;
+  case 'PREV':
+   if(focused>0)return withItem(state,focused-1);
+   return !locked&&state.cat>0?withItem({...state,cat:state.cat-1},categories[state.cat-1].items.length-1):state;
   case 'FOCUS':{
+   if(locked&&action.cat!==SETTINGS)return state;
    const next={...state,cat:action.cat};
    return action.item===undefined?next:withItem(next,action.item);
   }
   case 'CONFIRM':
    if(item.detail)return {...state,view:'detail',scroll:0,link:0};
    if(item.photo)return {...state,view:'photo'};
-   if(item.theme)return {...state,theme:item.theme};
+   if(item.folder){
+    const active=item.folder.findIndex(entry=>entry.theme===state.theme);
+    return {...state,view:'folder',sub:active>=0?active:0};
+   }
+   if(item.theme)return applyTheme(state,item.theme);
    return state;
   default:return state;
  }
 }
 
-// The URL an action should open, if any. Called before dispatching so window.open runs inside the user's gesture.
-// The subtitle shown for an item; theme items say whether they're in use.
+// The subtitle shown for an item; theme items say whether they're in use, and a folder names the one it holds.
 export function itemSub(state,item){
- return item.theme?(item.theme===state.theme?'✓ In use':item.sub??'Select to apply'):item.sub;
+ if(item.theme)return item.theme===state.theme?'✓ In use':item.sub??'Select to apply';
+ const active=item.folder?.find(entry=>entry.theme===state.theme);
+ return active?`✓ ${active.label} in use`:item.sub;
 }
 
+// The URL an action should open, if any. Called before dispatching so window.open runs inside the user's gesture.
 export function xmbLink(state,action){
  if(action.type!=='CONFIRM')return null;
  const item=currentItem(state);
  if(state.view==='detail')return item.detail.links?.[action.link??state.link]?.url??null;
- if(state.view==='menu'&&!item.detail&&!item.photo&&!item.theme)return item.link??null;
+ if(state.view==='menu'&&!item.detail&&!item.photo&&!item.theme&&!item.folder)return item.link??null;
  return null;
 }
