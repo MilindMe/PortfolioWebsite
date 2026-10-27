@@ -8,7 +8,7 @@ import {applyLighting} from './lighting';
 import {XmbRenderer} from './xmb/XmbRenderer';
 import {attachScreenInput, keyAction} from './xmb/input';
 import {createButtonGlow} from './xmb/buttonGlow';
-import {ROTATION_LOCKED, stageInsets} from './layout';
+import {PHONE, ROTATION_LOCKED, stageInsets} from './layout';
 import {MODEL_URL, loadModelBytes} from './modelAsset';
 import {DURATION, REST, SKIN_AT, pose, transitionKind} from './experiences/transitions';
 
@@ -16,6 +16,8 @@ import {DURATION, REST, SKIN_AT, pose, transitionKind} from './experiences/trans
 // KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
 // The PSP's half extents; each experience says what fraction of the free area it spans (see themes.js).
 const PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
+// On phones the PSP is the whole show, so every experience lets it fill nearly all of its free area.
+const PHONE_FILL={w:.96,h:.84};
 // Page wheel: 40px of scrolling is one step, a pause resets the count and steps are spaced so trackpad momentum
 // doesn't race through the menu.
 const WHEEL_STEP=40, WHEEL_RESET=200, WHEEL_GAP=140;
@@ -82,7 +84,8 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   function resetView(){
    const w=element.clientWidth||1, h=element.clientHeight||1, mix=frame.mix, lerp=(a,b)=>a+(b-a)*mix;
    const from=stageInsets(w,h,frame.from.wheel), to=stageInsets(w,h,frame.to.wheel), left=lerp(from.left,to.left), top=lerp(from.top,to.top);
-   const fillW=lerp(frame.from.fill.w,frame.to.fill.w), fillH=lerp(frame.from.fill.h,frame.to.fill.h);
+   const fill=experience=>PHONE?PHONE_FILL:experience.fill;
+   const fillW=lerp(fill(frame.from).w,fill(frame.to).w), fillH=lerp(fill(frame.from).h,fill(frame.to).h);
    const halfFov=Math.tan(THREE.MathUtils.degToRad(17)), distance=Math.max(PSP_HALF_HEIGHT*h/(halfFov*fillH*Math.max(1,h-top)),PSP_HALF_WIDTH*h/(halfFov*fillW*Math.max(1,w-left)));
    camera.setViewOffset(w,h,-left/2,-top/2,w,h);camera.updateProjectionMatrix();
    camera.position.set(0,0,distance);controls.target.set(0,0,0);controls.update();render();
