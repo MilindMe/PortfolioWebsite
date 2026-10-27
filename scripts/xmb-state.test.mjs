@@ -7,7 +7,7 @@ const entry=`export * from ${JSON.stringify(new URL('../src/xmb/state.js',import
 const bundle=await build({configFile:false,logLevel:'silent',plugins:[{name:'entry',resolveId:id=>id==='entry'?'\0entry':null,load:id=>id==='\0entry'?entry:null}],
  build:{write:false,minify:false,rollupOptions:{input:'entry',preserveEntrySignatures:'strict',output:{format:'es'}}}});
 const output=(Array.isArray(bundle)?bundle:[bundle]).flatMap(result=>result.output);
-const {xmbReducer,initialXmb,itemSub,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
+const {xmbReducer,initialXmb,itemSub,readingFocus,xmbSound,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
 
 const last=categories.length-1;
 const menu=(cat,item)=>({cat,item:categories.map((category,i)=>i===cat?item:0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',unlocked:true});
@@ -78,4 +78,35 @@ test('Classics opens as a folder of the colour themes and applies one from insid
  assert.equal(picked.theme,folder[open.sub+1].theme);assert.equal(picked.unlocked,true);assert.equal(picked.view,'folder');
  assert.equal(xmbReducer(open,{type:'FOCUS',sub:0}).sub,0);
  assert.equal(xmbReducer(open,{type:'BACK'}).view,'menu');assert.equal(xmbReducer(open,{type:'LEFT'}).view,'menu');
+});
+
+test('OPEN opens an item\'s page from anywhere once a theme is picked',()=>{
+ const bio=categories[START].items.findIndex(item=>item.id==='bio');
+ const opened=xmbReducer(menu(0,1),{type:'OPEN',cat:START,item:bio});
+ assert.deepEqual([opened.cat,opened.item[START],opened.view,opened.scroll,opened.link],[START,bio,'detail',0,0]);
+ const locked={...menu(SETTINGS,0),unlocked:false};
+ assert.equal(xmbReducer(locked,{type:'OPEN',cat:START,item:bio}),locked);
+});
+
+test('About me and Experience are reading pages; menus and locked states are not',()=>{
+ for(const id of ['bio','experience']){
+  const item=categories[START].items.findIndex(entry=>entry.id===id);
+  assert.equal(readingFocus({...menu(START,item),view:'detail'}),true,id);
+  assert.equal(readingFocus(menu(START,item)),false,id);
+ }
+ assert.equal(readingFocus({...menu(START,0),view:'detail',unlocked:false}),false);
+});
+
+test('menu sounds follow what the action changed',()=>{
+ const sound=(state,action)=>xmbSound(state,xmbReducer(state,action),action);
+ assert.equal(sound(menu(0,1),{type:'UP'}),'up');
+ assert.equal(sound(menu(0,0),{type:'DOWN'}),'down');
+ assert.equal(sound(menu(1,0),{type:'LEFT'}),'up');
+ assert.equal(sound(menu(0,0),{type:'CONFIRM'}),'ok');
+ assert.equal(sound({...menu(0,0),view:'detail'},{type:'BACK'}),'cancel');
+ // Nothing to move to, nothing to hear.
+ assert.equal(sound(menu(0,0),{type:'UP'}),null);
+ assert.equal(sound(menu(0,0),{type:'BACK'}),null);
+ // Opening a link from the menu.
+ assert.equal(xmbSound(menu(0,0),menu(0,0),{type:'CONFIRM'},true),'ok');
 });

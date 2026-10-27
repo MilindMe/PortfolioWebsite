@@ -10,7 +10,8 @@ import {attachScreenInput, keyAction} from './xmb/input';
 import {createButtonGlow} from './xmb/buttonGlow';
 import {PHONE, ROTATION_LOCKED, stageInsets} from './layout';
 import {MODEL_URL, loadModelBytes} from './modelAsset';
-import {DURATION, REST, SKIN_AT, pose, transitionKind} from './experiences/transitions';
+import {DURATION, REST, SKIN_AT, easeInOut, pose, transitionKind} from './experiences/transitions';
+import {experiences} from './xmb/themes';
 
 // Built by `npm run model:optimize` (meshopt geometry, KTX2 textures). Vite bundles the Basis transcoder that
 // KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
@@ -21,18 +22,24 @@ const PHONE_FILL={w:.96,h:.84};
 // Page wheel: 40px of scrolling is one step, a pause resets the count and steps are spaced so trackpad momentum
 // doesn't race through the menu.
 const WHEEL_STEP=40, WHEEL_RESET=200, WHEEL_GAP=140;
+// While a page worth reading is open (focus), a wheel experience gives up its strip and the PSP glides back to the
+// big Classic framing over GLIDE ms.
+const GLIDE=650;
+const framing=(experience,focus)=>focus&&experience.wheel?{...experience,wheel:false,fill:experiences.classic.fill}:experience;
 
 // children are page layers drawn behind the PSP (e.g. an experience's backdrop); the WebGL canvas sits above them.
-export default function MemoriesScene({lightMode='golden',reset,xmbState,experience,onXmbAction,onStatus,onProgress,children}) {
+export default function MemoriesScene({lightMode='golden',reset,xmbState,experience,focus=false,onXmbAction,onStatus,onProgress,children}) {
  const lightModeRef=useRef(lightMode);lightModeRef.current=lightMode;
  const xmbStateRef=useRef(xmbState);xmbStateRef.current=xmbState;
  const xmbActionRef=useRef(onXmbAction);xmbActionRef.current=onXmbAction;
  const experienceRef=useRef(experience);experienceRef.current=experience;
+ const focusRef=useRef(focus);focusRef.current=focus;
  const host=useRef(null), api=useRef(null);
  useEffect(()=>{api.current?.reset();},[reset]);
  useEffect(()=>{api.current?.lighting(lightMode);},[lightMode]);
  useEffect(()=>{api.current?.xmb(xmbState);},[xmbState]);
  useEffect(()=>{api.current?.experience(experience);},[experience]);
+ useEffect(()=>{api.current?.focus(focus);},[focus]);
  useEffect(()=>{
   const element=host.current;
   let renderer, disposed=false, loop=0, input=null, glow=null;
@@ -66,7 +73,8 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   // The model hangs off rig, which the experience transitions shake, flip and scale. frame mixes the camera framing
   // of the experience being left with the one being entered.
   const rig=new THREE.Group();scene.add(rig);
-  let current=experienceRef.current, frame={from:current,to:current,mix:1}, transition=null;
+  let current=experienceRef.current, focused=focusRef.current, transition=null, glide=null;
+  let frame={from:framing(current,focused),to:framing(current,focused),mix:1};
   // origin (where the action came from, as a world point) is unused for now; the saved pulse effect needs it.
   const act=(action,origin)=>xmbActionRef.current?.({...action,maxScroll:xmb.maxScroll});
   // One loop renders camera moves as they happen; the XMB decides when its texture is due (30 fps active, 12 idle).
@@ -75,6 +83,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   function animate(now){
    loop=requestAnimationFrame(animate);
    if(transition)step(now);
+   else if(glide)slide(now);
    if(xmb.tick(now))needsRender=true;
    if(needsRender&&!disposed){needsRender=false;renderer.render(scene,camera);}
   }
@@ -97,15 +106,32 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
    setPose(p);frame.mix=p.frame;resetView();
    if(t>=DURATION[transition.kind])transition=null;
   }
+  function slide(now){
+   const progress=Math.min(1,(now-glide.start)/GLIDE);
+   frame.mix=easeInOut(progress);resetView();
+   if(progress>=1)glide=null;
+  }
+  // Opening or closing a focus page glides between the experience's framing and the big one. Turning back mid-glide
+  // reverses from where the PSP is; mid-transition the transition just lands on the new framing.
+  function setFocus(next){
+   if(next===focused)return;
+   focused=next;
+   const target=framing(current,focused);
+   if(transition){frame.to=target;return;}
+   if(!rig.children.length||reduced.matches){glide=null;frame={from:target,to:target,mix:1};resetView();return;}
+   const now=performance.now(), done=glide?Math.min(1,(now-glide.start)/GLIDE):1;
+   frame={from:frame.to,to:target,mix:1-frame.mix};
+   glide={start:glide?now-(1-done)*GLIDE:now};
+  }
   // Switches experience: animated once the PSP is on screen, otherwise (first load, reduced motion) it snaps.
   function changeExperience(next){
    if(next.id===current.id)return;
    const kind=transitionKind(current,next), from=current;
    current=next;
    if(!kind||!rig.children.length||reduced.matches){
-    transition=null;frame={from:next,to:next,mix:1};setPose(REST);xmb.setSkin(next.screen);resetView();return;
+    transition=null;glide=null;frame={from:framing(next,focused),to:framing(next,focused),mix:1};setPose(REST);xmb.setSkin(next.screen);resetView();return;
    }
-   frame={from,to:next,mix:0};transition={kind,start:performance.now(),skinned:false};
+   glide=null;frame={from:framing(from,focused),to:framing(next,focused),mix:0};transition={kind,start:performance.now(),skinned:false};
   }
   function key(e){
    if((e.target!==renderer.domElement&&e.target!==document.body)||e.altKey||e.ctrlKey||e.metaKey)return;
@@ -130,7 +156,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   }
   function lost(e){e.preventDefault();onStatus('error');}
   addEventListener('keydown',key);addEventListener('wheel',wheel,{passive:false});renderer.domElement.addEventListener('webglcontextlost',lost);
-  controls.addEventListener('change',render);api.current={reset:resetView,lighting:mode=>{applyLighting(mode,'memories',lightRig);render();},xmb:state=>xmb.setState(state),experience:changeExperience};
+  controls.addEventListener('change',render);api.current={reset:resetView,lighting:mode=>{applyLighting(mode,'memories',lightRig);render();},xmb:state=>xmb.setState(state),experience:changeExperience,focus:setFocus};
   function disposeModel(root){root.traverse(o=>{o.geometry?.dispose();for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){for(const value of Object.values(m))if(value?.isTexture)value.dispose();m.dispose();}});}
   const manager=new THREE.LoadingManager();
   const ktx2=new KTX2Loader(manager).detectSupport(renderer);

@@ -9,7 +9,7 @@ export const SKIN_AT={enter:700,exit:400};
 export const WHEEL_AT=1000;
 
 const clamp01=value=>Math.min(1,Math.max(0,value));
-const easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+export const easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 const span=(t,start,length)=>clamp01((t-start)/length);
 
 export const REST={shakeX:0,shakeRot:0,rotY:0,scale:1,hop:0,frame:1};

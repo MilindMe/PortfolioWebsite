@@ -19,6 +19,11 @@ export function initialXmb(){
  return {cat:SETTINGS, item, view:'menu', sub, scroll:0, link:0, theme, unlocked:false};
 }
 
+// Whether the open page is one worth reading in full (detail.focus), so the page clears space around the PSP.
+export function readingFocus(state){
+ return state.unlocked&&state.view==='detail'&&!!currentItem(state).detail?.focus;
+}
+
 export function currentItem(state){
  return categories[state.cat].items[state.item[state.cat]];
 }
@@ -39,7 +44,8 @@ function withItem(state,index){
 const applyTheme=(state,theme)=>({...state,theme,unlocked:true});
 
 // Actions: LEFT RIGHT UP DOWN CONFIRM BACK, FOCUS {cat, item?} (or {sub} in a folder) from taps on the screen and
-// GOTO {cat}. NEXT and PREV come from scrolling the page: they walk down a column and on into the next category (or
+// GOTO {cat} and OPEN {cat, item}, which opens an item's page from anywhere (the name in the corner opens About me).
+// NEXT and PREV come from scrolling the page: they walk down a column and on into the next category (or
 // back up into the previous one's last item), scroll a detail page and step through photos and folders.
 // DOWN and NEXT carry maxScroll in the detail view because only the renderer knows how tall the text is.
 // CONFIRM may carry link (an index) when a link button is tapped directly, and applies a theme item's theme.
@@ -48,6 +54,10 @@ export function xmbReducer(state,action){
  const locked=!state.unlocked;
  // GOTO jumps straight to a category from anywhere, e.g. from the page wheel.
  if(action.type==='GOTO')return locked&&action.cat!==SETTINGS?state:{...state,view:'menu',cat:action.cat};
+ if(action.type==='OPEN'){
+  if(locked||!categories[action.cat]?.items[action.item]?.detail)return state;
+  return {...withItem({...state,cat:action.cat},action.item),view:'detail',scroll:0,link:0};
+ }
  const items=categories[state.cat].items, focused=state.item[state.cat], item=items[focused];
  if(state.view==='detail'){
   const links=item.detail.links??[];
@@ -123,4 +133,15 @@ export function xmbLink(state,action){
  if(state.view==='detail')return item.detail.links?.[action.link??state.link]?.url??null;
  if(state.view==='menu'&&!item.detail&&!item.photo&&!item.theme&&!item.folder)return item.link??null;
  return null;
+}
+
+// The menu sound an action makes (see sound.js), or null when nothing changed, e.g. pressing up at the top of a list.
+// Opening a page, folder or photo and applying a theme say ok, closing one says cancel, and moving the cursor says
+// up or down by direction. opened is whether the action opened a link.
+export function xmbSound(previous,next,action,opened=false){
+ if(opened||next.theme!==previous.theme)return 'ok';
+ if(next.view!==previous.view)return next.view==='menu'?'cancel':'ok';
+ const moved=next.cat!==previous.cat||next.item[next.cat]!==previous.item[next.cat]||next.sub!==previous.sub||next.scroll!==previous.scroll||next.link!==previous.link;
+ if(!moved)return null;
+ return ['UP','LEFT','PREV'].includes(action.type)?'up':'down';
 }

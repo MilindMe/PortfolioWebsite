@@ -45,6 +45,39 @@ function wrap(ctx,text,width){
  return lines;
 }
 
+// Lays a detail page out once as positioned ops (text runs, bullet dots and timeline rails), y from the top of the body.
+// A plain body is a single paragraph; its line breaks are kept. accent colours headings and the current timeline dot.
+function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
+ const ops=[];let y=0;
+ const text=(value,x,font,color,lineH=LINE_H)=>{
+  ctx.font=font;
+  for(const line of wrap(ctx,value,width-x)){ops.push({text:line,x,y,font,color});y+=lineH;}
+ };
+ const bullet=(value,x)=>{ops.push({dot:true,x:x+2,y:y+5.5,r:1.3,color:TEXT});text(value,x+9,`10px ${FONT}`,TEXT);};
+ (blocks??[{type:'p',text:body??''}]).forEach((block,i)=>{
+  if(i)y+=block.type==='h'?12:6;
+  if(block.type==='h'){text(block.text.toUpperCase(),0,headFont,accent,headH);ops.push({rule:true,x:0,y:y,w:24,color:accent});y+=6;}
+  else if(block.type==='p')text(block.text,0,`10px ${FONT}`,TEXT);
+  else if(block.type==='list')block.items.forEach(item=>bullet(item,2));
+  else if(block.type==='timeline'){
+   let previous=null;
+   block.entries.forEach((entry,j)=>{
+    if(j)y+=12;
+    const dotY=y+5;
+    if(previous!==null)ops.push({rail:true,x:5,y1:previous+5,y2:dotY-5});
+    ops.push({dot:true,x:5,y:dotY,r:3.4,color:entry.current?accent:BRIGHT,ring:!entry.current});
+    previous=dotY;
+    text(entry.when,18,`8.5px ${FONT}`,'rgba(255,255,255,.6)',12);
+    text(entry.role,18,`bold 11.5px ${FONT}`,BRIGHT,14);
+    if(entry.org)text(entry.org,18,`italic 9.5px ${FONT}`,TEXT,13);
+    y+=3;
+    entry.points?.forEach(point=>bullet(point,18));
+   });
+  }
+ });
+ return {ops,height:y};
+}
+
 export class XmbRenderer{
  constructor(reducedMotion){
   const layer=(width,height)=>{const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;return canvas.getContext('2d');};
@@ -187,7 +220,7 @@ export class XmbRenderer{
     ctx.beginPath();ctx.roundRect(p.x,p.y-10,p.width,20,10);
     ctx.shadowColor=`rgba(255,255,255,${.4+.2*beat})`;ctx.shadowBlur=6*SCALE;ctx.fillStyle='rgba(255,255,255,.92)';ctx.fill();
     ctx.shadowColor='transparent';ctx.shadowBlur=0;
-    ctx.strokeStyle=ctx.fillStyle='#1b1b1f';drawIcon(ctx,'link',p.x+12,p.y,10);
+    ctx.strokeStyle=ctx.fillStyle='#1b1b1f';drawIcon(ctx,p.icon??'link',p.x+12,p.y,10);
     ctx.font=`10px ${FONT}`;ctx.fillText(p.text,p.x+21,p.y+.5);
    }else{
     ctx.shadowColor=`rgba(255,255,255,${.45+.25*beat})`;ctx.shadowBlur=(4+3*beat)*SCALE;
@@ -364,19 +397,21 @@ export class XmbRenderer{
   if(labelAlpha>.01){
    ctx.globalAlpha=alpha*labelAlpha;ctx.textAlign='left';ctx.fillStyle=near>.5?BRIGHT:TEXT;
    ctx.font=this.p5?`${13+2*near}px ${P5_FONT}`:`${this.gta||this.bo2?'bold ':''}${11+near}px ${FONT}`;
-   const sub=itemSub(this.state,item), labelY=sub?y-5*near:y, label=this.p5?item.label.toUpperCase():item.label;
+   // Persona 5's taller label and its plate (with the plate's offset shadow) need more room above the subtitle.
+   const sub=itemSub(this.state,item), lift=this.p5?8:5, labelY=sub?y-lift*near:y, subY=y+(this.p5?3+7*near:8);
+   const label=this.p5?item.label.toUpperCase():item.label;
    if(focused){
     if(this.p5)this.p5Plate(x+20,labelY,ctx.measureText(label).width+14,sub?16:20);
     this.pulses.push({text:label,x:x+26,y:labelY,font:ctx.font,alpha:ctx.globalAlpha,outline:this.gta,color:this.bo2?BO2_ORANGE:undefined});
    }
    else if(this.gta)this.outlined(ctx,label,x+26,labelY);
    else ctx.fillText(label,x+26,labelY);
-   if(sub&&near>0){this.shadow(2);ctx.globalAlpha=subAlpha*labelAlpha;ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,x+26,y+8);}
+   if(sub&&near>0){this.shadow(2);ctx.globalAlpha=subAlpha*labelAlpha;ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,x+26,subY);}
   }
   if(hit)this.hits.push({x:x-18,y:y-ROW_H/2,w:SCREEN_W-x+18,h:ROW_H,action:hit});
  }
  detail(alpha,interactive){
-  const ctx=this.ctx, state=this.state, item=categories[state.cat].items[state.item[state.cat]], {title,body,links=[]}=item.detail??{};
+  const ctx=this.ctx, state=this.state, item=categories[state.cat].items[state.item[state.cat]], {title,links=[]}=item.detail??{};
   if(!title)return;
   ctx.globalAlpha=alpha;ctx.fillStyle=this.p5?'rgba(12,0,0,.72)':'rgba(0,0,0,.5)';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
   if(this.p5){ctx.fillStyle=P5_RED;ctx.beginPath();ctx.moveTo(0,14);ctx.lineTo(SCREEN_W*.62,10);ctx.lineTo(SCREEN_W*.58,50);ctx.lineTo(0,52);ctx.closePath();ctx.fill();}
@@ -384,15 +419,17 @@ export class XmbRenderer{
   ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=BRIGHT;
   if(this.p5){ctx.font=`18px ${P5_FONT}`;ctx.fillText(title.toUpperCase(),58,30);}
   else{ctx.font=`bold 15px ${FONT}`;ctx.fillText(title,58,31);}
-  if(item.sub){ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(item.sub,58,45);}
+  const sub=item.detail.sub??item.sub;
+  if(sub){ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,58,45);}
   this.noShadow();ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(28,54,SCREEN_W-56,.6);
-  ctx.font=`10px ${FONT}`;
-  if(!this.wrapped.has(item.id))this.wrapped.set(item.id,wrap(ctx,body,SCREEN_W-68));
-  const lines=this.wrapped.get(item.id), view=BODY_BOTTOM-BODY_TOP+(links.length?0:20), total=lines.length*LINE_H;
+  const key=`${item.id}:${this.skin}`;
+  if(!this.wrapped.has(key))this.wrapped.set(key,layoutPage(ctx,item.detail,SCREEN_W-68,{
+   accent:this.p5?P5_RED:this.bo2?BO2_ORANGE:BRIGHT, headFont:this.p5?`13px ${P5_FONT}`:`bold 9px ${FONT}`, headH:this.p5?17:12}));
+  const page=this.wrapped.get(key), view=BODY_BOTTOM-BODY_TOP+(links.length?0:20), total=page.height;
   this.maxScroll=Math.ceil(Math.max(0,total-view)/SCROLL_STEP);
   ctx.save();ctx.beginPath();ctx.rect(0,BODY_TOP,SCREEN_W,view);ctx.clip();
-  this.shadow(2);ctx.fillStyle=TEXT;ctx.textBaseline='top';
-  lines.forEach((line,i)=>ctx.fillText(line,30,BODY_TOP+4+i*LINE_H-this.shown.scroll*SCROLL_STEP));
+  this.shadow(2);ctx.textBaseline='top';ctx.textAlign='left';
+  this.drawPage(page.ops,30,BODY_TOP+4-this.shown.scroll*SCROLL_STEP,BODY_TOP,BODY_TOP+view);
   ctx.restore();this.noShadow();
   if(this.maxScroll>0){
    const track=view-8, thumb=Math.max(16,track*view/total), progress=Math.min(1,this.shown.scroll/this.maxScroll);
@@ -404,10 +441,10 @@ export class XmbRenderer{
   links.forEach((link,i)=>{
    const width=ctx.measureText(link.label).width+30, selected=i===state.link;
    if(interactive&&this.hovering(x,y-12,width,24))this.glow(x+width/2,y,width*.7);
-   if(selected)this.pulses.push({link:true,text:link.label,x,y,width,alpha:ctx.globalAlpha});
+   if(selected)this.pulses.push({link:true,text:link.label,icon:link.icon,x,y,width,alpha:ctx.globalAlpha});
    else{
     ctx.beginPath();ctx.roundRect(x,y-10,width,20,10);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=.8;ctx.stroke();
-    ctx.strokeStyle=ctx.fillStyle=TEXT;drawIcon(ctx,'link',x+12,y,10);
+    ctx.strokeStyle=ctx.fillStyle=TEXT;drawIcon(ctx,link.icon??'link',x+12,y,10);
     ctx.textAlign='left';ctx.fillText(link.label,x+21,y+.5);
    }
    if(interactive)this.hits.push({x,y:y-12,w:width,h:24,action:{type:'CONFIRM',link:i}});
@@ -415,6 +452,21 @@ export class XmbRenderer{
   });
   this.hint(links.length?'✕ Open   ○ Back':'○ Back',interactive);
   ctx.globalAlpha=1;
+ }
+ // Draws a laid-out page at (x, y), skipping ops outside the visible band from top to bottom.
+ drawPage(ops,x,y,top,bottom){
+  const ctx=this.ctx;
+  for(const op of ops){
+   if(op.rail){ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(x+op.x-.4,y+op.y1,.8,op.y2-op.y1);continue;}
+   const at=y+op.y;
+   if(at<top-16||at>bottom+4)continue;
+   if(op.rule){ctx.fillStyle=op.color;ctx.globalAlpha*=.7;ctx.fillRect(x+op.x,at,op.w,1);ctx.globalAlpha/=.7;}
+   else if(op.dot){
+    ctx.beginPath();ctx.arc(x+op.x,at,op.r,0,Math.PI*2);
+    if(op.ring){ctx.strokeStyle=op.color;ctx.lineWidth=1.1;ctx.stroke();}else{ctx.fillStyle=op.color;ctx.fill();}
+   }
+   else{ctx.font=op.font;ctx.fillStyle=op.color;ctx.fillText(op.text,x+op.x,at);}
+  }
  }
  hint(label,interactive){
   const ctx=this.ctx;
