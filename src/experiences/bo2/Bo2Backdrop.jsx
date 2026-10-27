@@ -1,9 +1,11 @@
 import React from 'react';
 import {categories} from '../../xmb/content';
+import {FEATURES} from '../../features';
 
 // Black Ops II's in-game HUD around the PSP, over a dark tactical backdrop: the kill feed and scoreboard in the bottom
 // left (its round is the page the PSP is on), and the scorestreaks and ammo counter on the right. Stays mounted so it
-// can fade out; its animations pause while hidden.
+// can fade out; its animations pause while hidden. The HUD only shows with the bo2ThemeAdvanced flag (src/features.js);
+// the basic theme is just the backdrop.
 
 // The kill feed, newest last: [attacker, victim]. The visitor's side is orange, like your team in the game.
 const FEED=[['Milind','Bugs'],['Milind','Deadlines'],['Scope Creep','Milind'],['Milind','Scope Creep']];
@@ -32,6 +34,7 @@ export default function Bo2Backdrop({active,state}){
  return <div className={`bo2-backdrop${active?' active':''}`} aria-hidden="true">
   <div className="bo2-grid"/>
   <div className="bo2-sweep"/>
+  {FEATURES.bo2ThemeAdvanced&&<>
   <div className="bo2-hud bo2-score">
    <ul className="bo2-feed">
     {FEED.map(([attacker,victim],i)=><li key={i} style={{'--i':i}}>
@@ -57,5 +60,6 @@ export default function Bo2Backdrop({active,state}){
     <p><strong>5</strong><span>/ 25</span></p>
    </div>
   </div>
+  </>}
  </div>;
 }

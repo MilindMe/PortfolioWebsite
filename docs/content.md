@@ -131,7 +131,10 @@ Each trophy is earned once per visitor (kept in the browser) and pops up as a PS
 - **Colour themes:** add an entry with `experience:'classic'` and its two backdrop colours, `colors:['#top','#bottom']`. It appears in the Classics folder automatically.
 - **Labels:** `label` and `sub` are what Settings shows.
 - **Default:** every visit starts on `DEFAULT_THEME` (Crimson). Themes are deliberately not remembered between visits.
-- **Black Ops II is switched off** by a feature flag: `bo2Theme` in `src/features.js`. Set it to `true` to bring the theme back to Settings. Any theme can be put behind a flag by giving it `feature:'<flag name>'` in `themes.js`.
+- **Black Ops II** is behind two feature flags in `src/features.js`:
+  - `bo2Theme` (on) offers the basic theme: the dark tactical backdrop and the Nuketown screen skin, with the PSP centred.
+  - `bo2ThemeAdvanced` (off) adds the in-game HUD round the PSP and the Main Menu beside it. While it's off, the theme's Settings line reads "Full theme coming soon".
+  - Any theme can be put behind a flag by giving it `feature:'<flag name>'` in `themes.js`.
 
 ## Game tuning
 `src/xmb/game.js`.

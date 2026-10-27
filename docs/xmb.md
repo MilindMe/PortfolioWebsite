@@ -11,7 +11,7 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | `docs/content.md` | **Where every piece of content lives** and how to edit it safely. |
 | `public/education/` | Pictures used on detail pages (the Education seal). |
 | `src/xmb/content.js` | **All the content.** Categories, items, project write-ups, links, photo captions. Start here to edit the site. |
-| `src/features.js` | Hard-coded feature flags. `bo2Theme` (off) hides the Black Ops II theme. |
+| `src/features.js` | Hard-coded feature flags. `bo2Theme` (on) offers the basic Black Ops II theme; `bo2ThemeAdvanced` (off) adds its HUD and Main Menu. |
 | `src/xmb/themes.js` | Themes (Crimson is the default), the page `experiences` they belong to, `themeColors()`, `themeExperience()`, and saving the chosen theme to `localStorage`. |
 | `src/xmb/state.js` | The navigation reducer (`xmbReducer`), its initial state (`initialXmb`), and `xmbLink`, which decides when an action opens a URL. |
 | `src/xmb/XmbRenderer.js` | Draws the whole OS into an offscreen canvas that becomes the screen's texture. Owns animation, layout constants and hit boxes. |

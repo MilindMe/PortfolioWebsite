@@ -13,7 +13,7 @@ export const themes=[
  {id:'midnight',label:'Midnight',colors:['#3d4049','#0a0b0e'],experience:'classic'},
  {id:'persona5',label:'Persona 5',sub:'Take your heart',colors:['#e5191c','#140000'],experience:'persona5'},
  {id:'gta',label:'Grand Theft Auto',sub:'Follow the damn train',colors:['#ec6fae','#0b6f8f'],experience:'gta'},
- {id:'bo2',label:'Black Ops II',sub:'Main menu',colors:['#3a3f44','#0c0d0e'],experience:'bo2',feature:'bo2Theme'},
+ {id:'bo2',label:'Black Ops II',sub:FEATURES.bo2ThemeAdvanced?'Main menu':'Full theme coming soon',colors:['#3a3f44','#0c0d0e'],experience:'bo2',feature:'bo2Theme'},
 ].filter(theme=>!theme.feature||FEATURES[theme.feature]);
 export const DEFAULT_THEME='crimson';
 
@@ -24,7 +24,8 @@ export const experiences={
  classic:{id:'classic',wheel:false,fill:{w:.78,h:.8},screen:'xmb'},
  persona5:{id:'persona5',wheel:'persona5',fill:{w:.95,h:.8},screen:'persona5'},
  gta:{id:'gta',wheel:false,fill:{w:.8,h:.78},screen:'gta'},
- bo2:{id:'bo2',wheel:'bo2',fill:{w:.8,h:.74},screen:'bo2'},
+ // Black Ops II only gets its Main Menu with the advanced flag (src/features.js); the basic theme keeps the PSP centred.
+ bo2:FEATURES.bo2ThemeAdvanced?{id:'bo2',wheel:'bo2',fill:{w:.8,h:.74},screen:'bo2'}:{id:'bo2',wheel:false,fill:{w:.8,h:.78},screen:'bo2'},
 };
 
 const months=[
