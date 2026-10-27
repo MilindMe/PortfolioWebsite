@@ -25,6 +25,8 @@ test('moving to or between game experiences moves the PSP; colour changes do not
  assert.equal(transitionKind(persona5,{id:'gta',wheel:'gta'}),'enter');
  assert.equal(transitionKind(classic,persona5),'enter');
  assert.equal(transitionKind(persona5,classic),'exit');
- assert.equal(transitionKind(classic,{id:'other',wheel:false}),null);
+ assert.equal(transitionKind(classic,{id:'gta',wheel:false}),'enter');
+ assert.equal(transitionKind({id:'gta',wheel:false},persona5),'enter');
+ assert.equal(transitionKind({id:'gta',wheel:false},classic),'exit');
  assert.equal(transitionKind(classic,classic),null);
 });

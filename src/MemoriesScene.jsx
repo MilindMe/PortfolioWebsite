@@ -6,7 +6,7 @@ import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {applyLighting} from './lighting';
 import {XmbRenderer} from './xmb/XmbRenderer';
-import {attachScreenInput, keyAction} from './xmb/input';
+import {addFaceButtons, attachScreenInput, keyAction} from './xmb/input';
 import {createButtonGlow} from './xmb/buttonGlow';
 import {PHONE, ROTATION_LOCKED, stageInsets} from './layout';
 import {MODEL_URL, loadModelBytes} from './modelAsset';
@@ -22,10 +22,12 @@ const PHONE_FILL={w:.96,h:.84};
 // Page wheel: 40px of scrolling is one step, a pause resets the count and steps are spaced so trackpad momentum
 // doesn't race through the menu.
 const WHEEL_STEP=40, WHEEL_RESET=200, WHEEL_GAP=140;
-// While a page worth reading is open (focus), a wheel experience gives up its strip and the PSP glides back to the
-// big Classic framing over GLIDE ms.
+// focus 'read' (a page worth reading is open) makes a wheel experience give up its strip, and the PSP glides back to
+// the big Classic framing over GLIDE ms. focus 'game' (Button Rush) does the same in every experience, but lets the PSP
+// fill the page.
 const GLIDE=650;
-const framing=(experience,focus)=>focus&&experience.wheel?{...experience,wheel:false,fill:experiences.classic.fill}:experience;
+const FOCUS_FILL={read:experiences.classic.fill,game:{w:.94,h:.86}};
+const framing=(experience,focus)=>focus?{...experience,wheel:false,fill:FOCUS_FILL[focus]}:experience;
 
 // children are page layers drawn behind the PSP (e.g. an experience's backdrop); the WebGL canvas sits above them.
 export default function MemoriesScene({lightMode='golden',reset,xmbState,experience,focus=false,onXmbAction,onStatus,onProgress,children}) {
@@ -76,7 +78,9 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   let current=experienceRef.current, focused=focusRef.current, transition=null, glide=null;
   let frame={from:framing(current,focused),to:framing(current,focused),mix:1};
   // origin (where the action came from, as a world point) is unused for now; the saved pulse effect needs it.
-  const act=(action,origin)=>xmbActionRef.current?.({...action,maxScroll:xmb.maxScroll});
+  // The new state goes straight to the screen, so a key or tap shows on the next frame rather than after React's
+  // commit and effects (which then hand over the same state again).
+  const act=(action,origin)=>{const next=xmbActionRef.current?.({...action,maxScroll:xmb.maxScroll});if(next)xmb.setState(next);};
   // One loop renders camera moves as they happen; the XMB decides when its texture is due (30 fps active, 12 idle).
   let needsRender=true;
   const render=()=>{needsRender=true;};
@@ -136,9 +140,10 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   function key(e){
    if((e.target!==renderer.domElement&&e.target!==document.body)||e.altKey||e.ctrlKey||e.metaKey)return;
    if(ROTATION_LOCKED||!e.shiftKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
-    const type=keyAction(e.key);
-    if(!type||(e.repeat&&(type==='CONFIRM'||type==='BACK')))return;
-    e.preventDefault();input?.press(type);act({type},input?.origin(type));return;
+    const action=keyAction(e.key);
+    // Held keys repeat menu moves, but never count as more button presses in the game.
+    if(!action||(e.repeat&&(xmbStateRef.current.view==='game'||action.type==='CONFIRM'||action.type==='BACK')))return;
+    e.preventDefault();input?.press(action.button);act(action,input?.origin(action.button));return;
    }
    e.preventDefault();const offset=camera.position.clone().sub(controls.target),spherical=new THREE.Spherical().setFromVector3(offset);spherical.theta+=(e.key==='ArrowLeft'?.12:e.key==='ArrowRight'?-.12:0);spherical.phi=THREE.MathUtils.clamp(spherical.phi+(e.key==='ArrowUp'?-.12:e.key==='ArrowDown'?.12:0),controls.minPolarAngle,controls.maxPolarAngle);camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(spherical));controls.update();render();}
   const resize=new ResizeObserver(()=>{const w=element.clientWidth,h=element.clientHeight;camera.aspect=w/h;renderer.setSize(w,h);resetView();});resize.observe(element);
@@ -156,7 +161,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   }
   function lost(e){e.preventDefault();onStatus('error');}
   addEventListener('keydown',key);addEventListener('wheel',wheel,{passive:false});renderer.domElement.addEventListener('webglcontextlost',lost);
-  controls.addEventListener('change',render);api.current={reset:resetView,lighting:mode=>{applyLighting(mode,'memories',lightRig);render();},xmb:state=>xmb.setState(state),experience:changeExperience,focus:setFocus};
+  controls.addEventListener('change',render);api.current={reset:resetView,lighting:mode=>{applyLighting(mode,'memories',lightRig);render();},xmb:state=>{xmb.setState(state);if(glow?.setGame(state.view==='game')){glow.update();render();}},experience:changeExperience,focus:setFocus};
   function disposeModel(root){root.traverse(o=>{o.geometry?.dispose();for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){for(const value of Object.values(m))if(value?.isTexture)value.dispose();m.dispose();}});}
   const manager=new THREE.LoadingManager();
   const ktx2=new KTX2Loader(manager).detectSupport(renderer);
@@ -174,6 +179,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
     // Emissive so the menu glows at its true colours, while the glossy surface still catches reflections.
     screen.material.dispose();
     screen.material=new THREE.MeshStandardMaterial({color:'#000',emissive:'#fff',emissiveMap:xmb.texture,roughness:.18,metalness:0,toneMapped:false});
+    addFaceButtons(gltf.scene);
     glow=createButtonGlow(gltf.scene);glow.update();
     const hoverButton=name=>{glow.setHover(name);glow.update();render();};
     input=attachScreenInput({element:renderer.domElement,camera,controls,model:gltf.scene,screen,xmb,act,invalidate:render,onHoverButton:hoverButton});

@@ -33,7 +33,7 @@ function renderer(t,reduced=false){
  const xmb=new XmbRenderer({matches:reduced});
  xmb.poke=()=>{xmb.activeUntil=Infinity;};
  xmb.boot(-10000);
- const state={cat:0,item:xmb.shown.items.map(()=>0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',unlocked:true};
+ const state={cat:0,item:xmb.shown.items.map(()=>0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',started:true,unlocked:true};
  xmb.setState(state);xmb.tick(1000);return {xmb,state};
 }
 
@@ -139,5 +139,31 @@ test('laid-out pages draw their headings and timeline, and scroll when long',t=>
  const experience=open(1);
  assert(experience.includes('2024 — Present')&&experience.includes('Résumé'),JSON.stringify(experience));
  assert(xmb.maxScroll>0);
+ xmb.dispose();
+});
+
+test('the Start screen shows only START, and a tap anywhere starts',t=>{
+ const {xmb,state}=renderer(t,true);
+ xmb.setState({...state,cat:5,started:false,unlocked:false});xmb.shown.start=null;
+ xmb.out.events=[];xmb.tick(2000);
+ assert(xmb.out.events.includes('START'),JSON.stringify(xmb.out.events));
+ assert(!xmb.out.events.includes('Settings'),JSON.stringify(xmb.out.events));
+ assert.deepEqual(xmb.hitTest(10,10),{type:'CONFIRM'});
+ assert.deepEqual(xmb.hitTest(400,200),{type:'CONFIRM'});
+ xmb.dispose();
+});
+
+test('a move draws on the next refresh and then at about 60 fps, even on a 144 Hz screen; a still menu drops to 30',t=>{
+ const {xmb,state}=renderer(t);
+ const refresh=1000/144;let now=5000;
+ const run=ms=>{let drawn=0;for(const end=now+ms;now<end;now+=refresh)drawn+=xmb.tick(now)?1:0;return drawn;};
+ run(2000);
+ xmb.setState({...state,item:state.item.map((v,i)=>i===0?1:v)});
+ assert.equal(xmb.tick(now),true,'the change shows on the next refresh');now+=refresh;
+ const moving=run(300);
+ assert(moving>=16&&moving<=19,`${moving} frames in 300 ms`);
+ run(1000);
+ const still=run(1000);
+ assert(still>=27&&still<=31,`${still} frames in a still second`);
  xmb.dispose();
 });

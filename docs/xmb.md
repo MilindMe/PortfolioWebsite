@@ -21,8 +21,8 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | `src/layout.js` | `stageInsets()`: how much of the page the wheel reserves (nothing without a wheel). Both the wheel and the camera framing read it. |
 | `src/experiences/transitions.js` | Timelines for moving the PSP between experiences (`pose()`), and when the skin swaps and the wheel appears. |
 | `src/experiences/persona5/` | The Persona 5 page: `Persona5Backdrop` behind the PSP and the `CallingCard` cut-in. |
-| `src/experiences/bo2/` | The Black Ops II page: `Bo2Backdrop` (key art from `public/experiences/bo2/`) and the `ClassSelect` panel. |
-| `src/experiences/gta/` | The GTA page: `GtaBackdrop` (Vice City art from `public/experiences/gta/`), the `WeaponWheel` and the `GtaCutscene` cut-in. |
+| `src/experiences/bo2/` | The Black Ops II page: `Bo2Backdrop` (a dark tactical grid with the game's HUD round the PSP: kill feed and scoreboard bottom left, its round following the current page, and scorestreaks and ammo on the right) and the `MainMenu` beside the PSP. |
+| `src/experiences/gta/` | The GTA page: `GtaBackdrop` (Vice City art from `public/experiences/gta/`), the `CashBar` (top right, see below) and the `GtaCutscene` cut-in. GTA has no wheel. |
 | `src/useWheelBox.js` | The strip `stageInsets()` leaves for a wheel, shared by both wheels. |
 | `src/App.jsx` | Page shell. Holds the XMB state with `useReducer`, opens links, and renders the active experience's wheel and extras. |
 | `public/memories/` | Photos for the Memories category. |
@@ -51,10 +51,11 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 ## State model (`state.js`)
 
 ```js
-{cat, item: [focused index per category], view: 'menu' | 'detail' | 'photo' | 'folder', sub, scroll, link, theme, unlocked}
+{cat, item: [focused index per category], view: 'menu' | 'detail' | 'photo' | 'folder' | 'game', sub, scroll, link, theme, started, unlocked}
 ```
 
-- **Theme first**: every visit starts with `unlocked: false` on **Settings**, with the last theme focused (inside Classics if it lives there). While locked, only Settings is drawn and nothing can leave it. Applying any theme sets `unlocked`, the other categories fade in, and `App.jsx` moves to **About** (`START`) once any transition has played. Until then the page shows "Select a theme first" under the PSP, in Michroma (self-hosted, a wide geometric face like the PlayStation wordmark), and the layout is always Classic.
+- **Start screen**: every visit starts with `started: false`. The screen shows only its backdrop (in the saved theme's colours), the status bar and a pulsing **START**, with "Press Start" under the PSP. Only `CONFIRM` does anything (✕, Enter, or a tap anywhere on the screen, which is one big hit box); it sets `started`, plays `ok`, and the Settings menu fades in.
+- **Theme first**: after Start, the visit is `unlocked: false` on **Settings**, with the last theme focused (inside Classics if it lives there). While locked, only Settings is drawn and nothing can leave it. Applying any theme sets `unlocked`, the other categories fade in, and `App.jsx` moves to **About** (`START`) once any transition has played. Until then the page shows "Select a theme first" under the PSP, in Michroma (self-hosted, a wide geometric face like the PlayStation wordmark), and the layout is always Classic.
 - `view: 'folder'` lists a folder item's entries (`item.folder`), with `sub` the focused one. The column slides left, keeping just the folder icon, and the entries open to its right like a PSP folder. `LEFT`/`BACK` or tapping the folder icon closes it.
 
 - `item` remembers the focused item in **every** category, so going left and right returns you to where you were, like the real XMB.
@@ -117,7 +118,8 @@ Each frame composites cached layers and animated highlights into the texture can
 
 - `tick(now)` eases every displayed value toward its target with exponential smoothing (`1 - exp(-dt/0.07)`, about 250 ms to settle). Values tracked: category position, each category's item position, and scroll. Opening/closing detail and photo views switches in one rendered frame, without cross-fading the outgoing view underneath the new one.
 - **Boot**: `boot(at)` is called 250 ms after the model loads. Before that the screen is black. The background then fades in over 0.8 s and the menu follows.
-- **Frame budget**: `tick()` gates itself. It redraws every 32 ms (~30 fps) while something is easing or for 4 s after any `setState`/`setHover` (`poke()`), and otherwise every 80 ms (~12 fps) for the idle waves (`ACTIVE_FRAME`, `IDLE_FRAME`, `ACTIVE_FOR`).
+- **Frame budget**: `tick()` gates itself. A change (`dirty`) draws on the next display refresh, and it redraws at 60 fps while anything is easing (`MOVING_FRAME`). It drops to every 32 ms (~30 fps) for 4 s after any `setState`/`setHover` (`poke()`) once the menu is still, and to every 80 ms (~12 fps) for the idle waves (`ACTIVE_FRAME`, `IDLE_FRAME`, `ACTIVE_FOR`). `dueAt` keeps the average on screens whose refresh isn't a multiple of 60 (a 144 Hz screen alternates two and three refreshes). A warm frame costs about 2 ms of canvas work plus under 1 ms of WebGL, and each 60 fps burst lasts only as long as the easing (about 0.3 s per move).
+- **Input latency**: `MemoriesScene`'s `act()` hands the state that `App.jsx`'s `xmbAction` returns straight to the renderer, so keys and taps don't wait for React's commit and effects. The effect then passes the same state again, which costs one redundant redraw.
 - **Reduced motion**: with `prefers-reduced-motion`, easing is instant, the waves freeze, and the canvas only redraws when the state or the clock's minute changes.
 
 ### Hit boxes and hover glow
@@ -144,19 +146,19 @@ Each theme names an `experience`, a whole page treatment in `experiences`:
 ```js
 classic:{id:'classic',wheel:false,fill:{w:.78,h:.8},screen:'xmb'},
 persona5:{id:'persona5',wheel:'persona5',fill:{w:.95,h:.8},screen:'persona5'},
-gta:{id:'gta',wheel:'gta',fill:{w:.95,h:.8},screen:'gta'},
-bo2:{id:'bo2',wheel:'bo2',fill:{w:.95,h:.8},screen:'bo2'},
+gta:{id:'gta',wheel:false,fill:{w:.8,h:.78},screen:'gta'},
+bo2:{id:'bo2',wheel:'bo2',fill:{w:.8,h:.74},screen:'bo2'},
 ```
 
-- **`wheel`**: which page wheel to show (`App.jsx` maps `persona5` to `PageWheel`, `gta` to `WeaponWheel` and `bo2` to `ClassSelect`; each gets `onSelect(cat)` and `onAction(action)`), or `false`. `stageInsets()` reserves its strip only when there is one.
+- **`wheel`**: which page wheel to show (`App.jsx` maps `persona5` to `PageWheel` and `bo2` to `MainMenu`; each gets `onSelect(cat)` and `onAction(action)`), or `false`. `stageInsets()` reserves its strip only when there is one.
 - **`fill`**: how much of the free area the PSP spans (width, height). Classic keeps it to about 80% of the page.
 - **`screen`**: the XMB skin (`XmbRenderer.setSkin`). `bo2` draws Nuketown (`public/experiences/bo2/nuketown.jpg`, scaled to cover once and cached) shaded darker on the menu side, with category names in capitals and the focused item in orange. `gta` draws a sunset with the Vice City skyline and bay, and outlines labels in black like San Andreas' subtitles. `persona5` replaces the waves with a turning starburst, halftone dots and slashes, sets labels in capitals in Anton, and puts the focused item on a black jagged plate. Layout and hit boxes are the same in every skin.
 - **Switching**: `App.jsx` derives the experience from `state.theme`, puts `experience-<id>` on `<main>`, and passes it to `MemoriesScene`. When only the colours change (Classic to Classic), nothing moves.
-  - Moving to a game experience (from Classic or another game) plays `enter`: the PSP shakes, does a full flip on Y with a dip and a hop, and the camera framing slides it into the free area. Losing one plays `exit`: a reverse flip back to the big frame.
+  - Moving to a game experience (from Classic or another game) plays `enter`: the PSP shakes, does a full flip on Y with a dip and a hop, and the camera framing slides it into the free area (GTA has no wheel, so it stays centred). Going back to Classic plays `exit`: a reverse flip back to the big frame.
   - The skin swaps at `SKIN_AT`, while the screen faces away. The wheel swings in after `WHEEL_AT`.
   - Each game also plays its cut-in from `cutIns` in `App.jsx`: Persona 5's `CallingCard`, or GTA's `GtaCutscene` (letterbox bars and Big Smoke's line as an outlined subtitle, about 3.6 s). Its backdrop fades in behind the canvas (backdrops are passed to `MemoriesScene` as children). `GtaBackdrop` only requests its image once the experience has been used.
-  - **Choose Class** (Black Ops II) replaces a wheel: the pages are the classes (current one orange, with a progress bar showing its place) and the current page's items are its loadout, filling Primary, Secondary, Perk 1… from the top. Clicking a class jumps there; clicking a slot focuses that item, and clicking the focused one opens it; ESC Back sends `BACK`. Beside the PSP it stacks; in a wide, short strip the loadout sits to the right of the classes. Black Ops has no cut-in.
-  - **The weapon wheel** is an SVG ring with one segment per category, lit blue for the current one. The hub shows the category, `‹ n / 6 ›` (the arrows step pages) and the view and focused item. Segments are real buttons placed over the ring.
+  - **Main Menu** (Black Ops II) replaces a wheel: the pages stacked under "Main Menu" in the menu's teal, the current one orange between thin brackets with the Black Ops mode it stands in for beneath (Campaign, Zombies, Theater, Combat Record, Party, Options). Behind them a wireframe globe turns inside a sniper scope's mil-dot reticle. Games is Zombies, so the menu lights Ray Gun green there. Clicking a page jumps the PSP there. In a wide, short strip the pages sit in a row. Black Ops has no cut-in.
+  - **The cash bar** (GTA) is GTA V's `cash $1234` readout in the top-right corner, in Pricedown green. Pricedown's licence rules out web fonts, so `scripts/render-cash-sprite.py` renders its glyphs once into `public/experiences/gta/cash.png` and writes their positions to `cashGlyphs.js`; `CashBar` builds the text from that sprite. Clearing a Button Rush round while the GTA theme is on pays `PAYOUTS[round]` from `game.js` ($250, $500, $1000, $2500): `App.jsx` adds `roundPay(previous, next)` to the cash, which is kept in `localStorage` (`gta-cash`). Each payout slides in underneath as `+$500` while the total counts up.
   - A saved experience appears on load without a transition, and reduced motion snaps straight to the end.
 - **Adding a game experience**: add it to `experiences` and a theme that uses it, a skin branch in `XmbRenderer` if the screen changes, and any page pieces under `src/experiences/<id>/`, rendered from `App.jsx` and styled under `.experience-<id>`.
 
@@ -311,12 +313,12 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 - The PSP's D-pad, ✕ and ○ work.
 - Links open in a new tab.
 - With rotation locked, dragging and Shift+arrows do nothing.
-- The PSP loads centred at about 80% of the page with no wheel, on Settings only, with "Select a theme first" underneath. Left/right and scrolling can't leave Settings.
+- The PSP loads centred at about 80% of the page with no wheel, on the Start screen with "Press Start" underneath. Arrows and scrolling do nothing; ✕, Enter or a tap shows Settings only, with "Select a theme first" underneath. Left/right and scrolling can't leave Settings.
 - Classics opens as a folder of the colour themes. Picking any theme fades in the other categories and moves to About; scrolling then walks down the items and on into the next category.
 - The screen is red by default. Picking a Classic theme fades the backdrop to it, and the next visit starts on that theme (still locked).
 - Picking Persona 5 shakes, flips and shrinks the PSP, plays the calling card, swings the wheel in and turns the page and screen red and black. Picking a Classic theme flips it back.
-- Picking Grand Theft Auto plays the cutscene, then shows the Vice City page, the weapon wheel and the skyline skin. Clicking a segment or an arrow moves the PSP.
-- Picking Black Ops II shows the key art, Choose Class and Nuketown on the PSP. Classes, loadout slots and ESC Back all drive the PSP.
+- Picking Grand Theft Auto flips the PSP, plays the cutscene, then shows the Vice City page, the cash bar top right and the skyline skin, with the PSP still centred. Clearing a Button Rush round adds its payout with a `+$` line, and the total survives a reload.
+- Picking Black Ops II shows the smoky backdrop, the main menu and Nuketown on the PSP. Clicking a page in the menu drives the PSP.
 - In Persona 5, the wheel spins to each page as the XMB changes, and clicking a wheel label jumps there.
 - Hovering a PSP button or an on-screen item makes it glow.
 - On a phone-sized window, the Persona 5 wheel sits above the PSP and the lighting button moves to the top-right.

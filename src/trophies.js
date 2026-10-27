@@ -4,6 +4,7 @@
 export const trophies={
  // Example; award it with awardTrophy('first-steps') wherever it should be earned.
  'first-steps':{title:'1 down, lots more to go!',description:'Earn your first trophy.',grade:'bronze'},
+ 'button-rush':{title:'Fastest fingers on the PSP',description:'Clear all four rounds of Button Rush.',grade:'gold'},
 };
 export const GRADES=['bronze','silver','gold','platinum'];
 

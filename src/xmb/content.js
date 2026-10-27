@@ -8,7 +8,8 @@ const resume={label:'Résumé', url:RESUME_URL, icon:'resume'};
 
 // Everything the PSP's XMB shows. Edit freely; the screen and the screen-reader copy both read from here.
 // Item fields: label, sub (subtitle), icon (see icons.js), detail {title, body, links:[{label,url,icon?}]},
-// link (opened directly on confirm), photo (path under /public) and caption, or folder (a list of items it opens).
+// link (opened directly on confirm), photo (path under /public) and caption, folder (a list of items it opens), or
+// game (opens the Button Rush mini game, see game.js).
 // Settings is generated from themes.js: the colour-only themes sit in the Classics folder, and each game
 // experience gets its own item. Theme items carry theme and apply it on confirm.
 // A detail can use blocks instead of body for a laid-out page: {type:'h', text} headings, {type:'p', text}
@@ -36,10 +37,7 @@ export const categories = [
  {
   id:'games', label:'Games', icon:'game',
   items:[
-   {id:'doom', label:'DOOM', sub:'Coming soon', icon:'game',
-    detail:{title:'DOOM', body:'The 1993 classic, running in the browser through WebAssembly and drawn straight onto this PSP\'s screen.\n\nComing soon.'}},
-   {id:'mini-games', label:'Mini games', sub:'Coming soon', icon:'game',
-    detail:{title:'Mini games', body:'Small games built for the PSP screen, playable with the keyboard or the PSP\'s own buttons.\n\nComing soon.'}},
+   {id:'button-rush', label:'Button Rush', sub:'Mini game · beat the clock', icon:'game', game:'button-rush'},
   ],
  },
  {
@@ -74,10 +72,10 @@ export const categories = [
     ], links:[resume]}},
 
    {id:'skills', label:'Skills', sub:'Languages & tools', icon:'wrench',
-    detail:{title:'Skills', body:'Languages: JavaScript, TypeScript, Kotlin, Python\nFrontend: React, three.js, CSS\nBackend: Node, REST, SQL\nTools: Git, CI/CD, Figma'}},
+    detail:{title:'Skills', body:'Languages: Go, C, C#, TypeScript, Kotlin, Python\nFrameworks & Libraries: React, React Native, Angular, PyTorch, Langchain, LangGraph\nTools: Git, CI/CD, Figma'}},
 
    {id:'education', label:'Education', sub:'Studies', icon:'education',
-    detail:{title:'Education', body:'Degree — University (Year)\nRelevant coursework, awards or clubs.'}},
+    detail:{title:'Education', body:'Combinatorics & Optimization + Statistics \n Minor in Computing \n University of Waterloo.'}},
   ],
  },
  {

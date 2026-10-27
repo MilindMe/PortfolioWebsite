@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {buttonActions} from './input';
+import {buttonActions, buttonNames} from './input';
 
 const COLOR='#ffd7a0';
 
@@ -14,11 +14,11 @@ function ringTexture(){
  return texture;
 }
 
-// Static halos around the PSP buttons that do something, brightening on hover.
+// Static halos around the PSP buttons that do something, brightening on hover. △ and □ only light up in the game.
 // Additive quads with one shared texture: no post-processing, a handful of draw calls.
 export function createButtonGlow(model){
  const texture=ringTexture(), geometry=new THREE.PlaneGeometry(1,1), halos=[];
- for(const name of Object.keys(buttonActions)){
+ for(const name of Object.keys(buttonNames)){
   const button=model.getObjectByName(name);
   if(!button)continue;
   // The halo sits beside the button in its parent, so take the box through the node's transform.
@@ -31,11 +31,13 @@ export function createButtonGlow(model){
   halo.raycast=()=>{};
   button.parent.add(halo);halos.push({name,halo,material});
  }
- let hovered=null;
+ let hovered=null, game=false;
  return {
   setHover(name){hovered=name;},
+  // Returns whether that changed anything.
+  setGame(value){const changed=value!==game;game=value;return changed;},
   update(){
-   halos.forEach(({name,material})=>{material.opacity=name===hovered?.95:.4;});
+   halos.forEach(({name,halo,material})=>{halo.visible=game||!!buttonActions[name];material.opacity=name===hovered?.95:.4;});
   },
   dispose(){texture.dispose();geometry.dispose();halos.forEach(({halo,material})=>{halo.removeFromParent();material.dispose();});},
  };

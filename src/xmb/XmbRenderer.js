@@ -3,13 +3,16 @@ import {categories} from './content';
 import {drawIcon} from './icons';
 import {SETTINGS, currentItem, itemSub} from './state';
 import {themeColors} from './themes';
+import {ROUNDS} from './game';
 
 // The XMB is laid out in PSP-sized logical units and drawn at 2× into a canvas that textures the screen mesh.
 // Cache the menu and page overlay separately so animated menu labels stay beneath the incoming page.
 // The soft backdrop redraws at 1×; cached text stays at 2× and pulses animate between the appropriate layers.
 export const SCREEN_W=480, SCREEN_H=270;
-// ~30 fps while the visitor is active or something is easing, ~12 fps for the idle waves.
-const ACTIVE_FRAME=32, IDLE_FRAME=80, ACTIVE_FOR=4000;
+// Frame pacing, in ms: 60 fps while something eases or has just changed (so input shows on the next frame), ~30 fps
+// while the visitor is active but the menu is still, and ~12 fps for the idle waves. A warm frame costs about 2 ms of
+// canvas work, and the 60 fps bursts only last as long as the easing (about a third of a second per move).
+const MOVING_FRAME=1000/60, ACTIVE_FRAME=32, IDLE_FRAME=80, ACTIVE_FOR=4000;
 const SCALE=2, FONT='"Helvetica Neue", Helvetica, Arial, sans-serif', P5_FONT='Anton, Impact, "Arial Narrow", sans-serif';
 const CAT_X=118, CAT_Y=74, CAT_W=78, ROW_H=34, ITEM_Y=CAT_Y+64, ABOVE_Y=CAT_Y-44;
 const TEXT='#dadada', BRIGHT='#ffffff', P5_RED='#e5191c';
@@ -21,6 +24,11 @@ const SKYLINE=[[0,34,22],[30,20,40],[48,40,28],[86,16,56],[100,46,34],[150,26,18
  [312,24,44],[334,44,30],[376,18,52],[392,40,26],[430,26,38],[454,30,20]], HORIZON=196;
 // Black Ops II skin: Nuketown behind the menu, with the focused item in the game's orange.
 const NUKETOWN='/experiences/bo2/nuketown.jpg', BO2_ORANGE='#f47b20';
+// Button Rush: the PSP's face-button colours, the sequence tiles' size and row, and when the clock turns red (ms left).
+const FACE={triangle:'#4fd1a5',circle:'#ff6b72',cross:'#7eb4ff',square:'#f39ad6'};
+const TILE=40, TILE_GAP=8, TILE_Y=146, HURRY=1500;
+// The title card's key legend, in the order the buttons are shown.
+const LEGEND=[['up','↑ W'],['right','→ D'],['down','↓ S'],['left','← A'],['triangle','I'],['square','J'],['cross','K X'],['circle','L O']];
 
 const waves=[
  {y:172,amp:18,len:.008,speed:.22,width:42,alpha:.06},
@@ -89,9 +97,10 @@ export class XmbRenderer{
   // The texture is re-uploaded every frame and shown at about its own size, so mipmaps would cost more than they give.
   this.texture.generateMipmaps=false;this.texture.minFilter=THREE.LinearFilter;
   this.reduced=reducedMotion;
-  this.state=null;this.bootAt=null;this.lastTime=0;this.dirty=true;this.minute='';this.moving=false;this.activeUntil=0;this.pulses=[];
-  // reveal fades in the categories other than Settings once a theme is picked; folder opens a folder item.
-  this.shown={cat:0,items:categories.map(()=>0),detail:0,photo:0,scroll:0,top:null,bottom:null,reveal:0,folder:0,sub:0};
+  this.state=null;this.bootAt=null;this.lastTime=0;this.dueAt=0;this.dirty=true;this.minute='';this.moving=false;this.activeUntil=0;this.pulses=[];
+  // reveal fades in the categories other than Settings once a theme is picked; folder opens a folder item; start is
+  // the Start screen, fading out once it is passed (null until the first state says where to begin).
+  this.shown={cat:0,items:categories.map(()=>0),detail:0,photo:0,scroll:0,top:null,bottom:null,reveal:0,folder:0,sub:0,game:0,start:null};
   this.hits=[];this.maxScroll=0;this.photos=new Map();this.wrapped=new Map();this.hover=null;this.skin='xmb';
  }
  setState(state){this.state=state;this.dirty=true;this.poke();}
@@ -131,7 +140,11 @@ export class XmbRenderer{
  // Advances the animations and redraws when a frame is due; returns whether the texture was updated.
  tick(now){
   const state=this.state;if(!state)return false;
-  if(now-this.lastTime<(this.moving||now<this.activeUntil?ACTIVE_FRAME:IDLE_FRAME))return false;
+  const interval=this.dirty||this.moving?MOVING_FRAME:now<this.activeUntil?ACTIVE_FRAME:IDLE_FRAME;
+  // dueAt keeps the average rate on screens whose refresh isn't a multiple of it (a 144 Hz screen alternates two and
+  // three refreshes to average 60 fps); a frame up to 1 ms early counts as on time.
+  if(now<this.dueAt+interval-1)return false;
+  this.dueAt=now-this.dueAt<interval*2?this.dueAt+interval:now;
   const dt=Math.min(.1,(now-(this.lastTime||now))/1000);this.lastTime=now;
   const instant=this.reduced.matches, k=instant?1:1-Math.exp(-dt/.07), shown=this.shown;
   let moving=false;
@@ -145,8 +158,13 @@ export class XmbRenderer{
   // behind a newly opened page (or the old page over the returning menu).
   shown.detail=state.view==='detail'?1:0;
   shown.photo=state.view==='photo'?1:0;
+  shown.game=state.view==='game'?1:0;
+  // The game's clock and flashes move every frame.
+  if(state.view==='game')moving=true;
   ease(shown,'scroll',state.scroll);
   ease(shown,'reveal',state.unlocked?1:0);
+  shown.start??=state.started?0:1;
+  ease(shown,'start',state.started?0:1);
   ease(shown,'folder',state.view==='folder'?1:0);
   ease(shown,'sub',state.sub??0);
   // Theme changes cross-fade the backdrop colours.
@@ -185,7 +203,7 @@ export class XmbRenderer{
   if(changed)this.foreground(booted);
   out.drawImage(this.ctx.canvas,0,0,SCREEN_W,SCREEN_H);
   this.pulse(t);
-  if(this.shown.detail>0||this.shown.photo>0)out.drawImage(this.overlay.canvas,0,0,SCREEN_W,SCREEN_H);
+  if(this.shown.detail>0||this.shown.photo>0||this.shown.game>0)out.drawImage(this.overlay.canvas,0,0,SCREEN_W,SCREEN_H);
   this.pulse(t,true);
  }
  // Everything with blurred shadows: drawn into the cached layer, along with the hit areas.
@@ -198,15 +216,17 @@ export class XmbRenderer{
   };
   clear(ctx);clear(this.overlay);
   this.hits=[];this.pulses=[];
-  const menu=clamp01((booted-.7)/.6), overlay=Math.max(shown.detail,shown.photo);
+  const menu=clamp01((booted-.7)/.6), overlay=Math.max(shown.detail,shown.photo,shown.game), start=shown.start;
   this.status(menu);
-  this.menu(menu*(1-overlay),state.view==='menu');
-  this.folder(menu*(1-overlay),state.view==='folder');
+  if(start>0)this.startScreen(menu*start,!state.started);
+  this.menu(menu*(1-overlay)*(1-start),state.started&&state.view==='menu');
+  this.folder(menu*(1-overlay)*(1-start),state.started&&state.view==='folder');
   // Page backgrounds and text must cover the outgoing menu's animated label.
   this.ctx=this.overlay;
   try{
    if(shown.detail>0)this.detail(shown.detail*menu,state.view==='detail');
    if(shown.photo>0)this.photoView(shown.photo*menu,state.view==='photo');
+   if(shown.game>0)this.gameView(shown.game*menu,state.view==='game');
   }finally{this.ctx=ctx;}
  }
  // The focused item's label and the selected link glow in time; foreground() leaves them out and records them here.
@@ -369,6 +389,20 @@ export class XmbRenderer{
     hit:interactive&&fade>.5?(i===focused?{type:'CONFIRM'}:{type:'FOCUS',cat:c,item:i}):null});
   });
  }
+ // The Start screen every visit opens on: a pulsing START over the backdrop, and the whole screen starts on a tap.
+ startScreen(alpha,interactive){
+  const ctx=this.ctx, y=SCREEN_H/2-10;
+  ctx.globalAlpha=alpha;ctx.textBaseline='middle';
+  ctx.font=`bold 22px ${FONT}`;
+  const label='START', width=ctx.measureText(label).width;
+  if(interactive&&this.hovering(0,0,SCREEN_W,SCREEN_H))this.glow(SCREEN_W/2,y,70);
+  this.pulses.push({text:label,x:SCREEN_W/2-width/2,y,font:ctx.font,alpha});
+  this.noShadow();ctx.fillStyle='rgba(255,255,255,.45)';ctx.fillRect(SCREEN_W/2-60,y+18,120,.6);
+  this.shadow(2);ctx.font=`9px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';
+  ctx.fillText('Press ✕ or tap the screen',SCREEN_W/2,y+32);
+  this.noShadow();ctx.globalAlpha=1;
+  if(interactive)this.hits.push({x:0,y:0,w:SCREEN_W,h:SCREEN_H,action:{type:'CONFIRM'}});
+ }
  // An open folder lists its entries to the right of its icon, the focused one level with it, like the PSP's.
  folder(alpha,interactive){
   const open=this.shown.folder, entries=currentItem(this.state)?.folder;
@@ -498,6 +532,98 @@ export class XmbRenderer{
   }
   this.hint('○ Back',interactive);
   ctx.globalAlpha=1;
+ }
+ // Button Rush (game.js): the title card with its key legend, a "Round n" card, then the round's sequence as tiles
+ // with the next one lit and its clock as a draining bar, and the time's-up and cleared cards.
+ gameView(alpha,interactive){
+  const ctx=this.ctx, game=this.state.game, now=performance.now();
+  if(!game)return;
+  const rounds=ROUNDS.length, round=ROUNDS[game.round], accent=this.p5?P5_RED:this.bo2?BO2_ORANGE:BRIGHT;
+  ctx.globalAlpha=alpha;ctx.fillStyle=this.p5?'rgba(12,0,0,.72)':'rgba(0,0,0,.55)';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
+  // A wrong button flashes the screen red and shakes the tiles.
+  const miss=game.missAt?clamp01(1-(now-game.missAt)/350):0;
+  if(miss>0){ctx.fillStyle=`rgba(220,30,40,${.3*miss})`;ctx.fillRect(0,0,SCREEN_W,SCREEN_H);}
+  ctx.strokeStyle=BRIGHT;this.shadow(3);drawIcon(ctx,'game',38,34,22);
+  ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=BRIGHT;
+  if(this.p5){ctx.font=`18px ${P5_FONT}`;ctx.fillText('BUTTON RUSH',58,30);}
+  else{ctx.font=`bold 15px ${FONT}`;ctx.fillText('Button Rush',58,31);}
+  this.noShadow();ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(28,54,SCREEN_W-56,.6);
+  const centre=(text,y,font,color=BRIGHT)=>{ctx.font=font;ctx.fillStyle=color;ctx.textAlign='center';ctx.fillText(text,SCREEN_W/2,y);};
+  const big=size=>this.p5?`${size+4}px ${P5_FONT}`:`bold ${size}px ${FONT}`;
+  this.shadow(2);
+  if(game.status==='title'){
+   centre('Press the buttons in order before time runs out.',94,`11px ${FONT}`);
+   centre(`${rounds} rounds, from ${ROUNDS[0].length} buttons to ${ROUNDS.at(-1).length}. A wrong button starts the sequence over.`,112,`9px ${FONT}`,TEXT);
+   const step=40, x0=SCREEN_W/2-step*(LEGEND.length-1)/2;
+   LEGEND.forEach(([button,key],i)=>{
+    const x=x0+i*step;
+    ctx.beginPath();ctx.roundRect(x-13,147,26,26,6);ctx.fillStyle='rgba(0,0,0,.4)';ctx.fill();
+    ctx.lineWidth=.8;ctx.strokeStyle='rgba(255,255,255,.4)';ctx.stroke();
+    this.glyph(button,x,160,7);
+    ctx.font=`8.5px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.fillText(key,x,186);
+   });
+   centre('Click the PSP\'s buttons or use the keys',208,`8.5px ${FONT}`,'rgba(255,255,255,.6)');
+  }
+  else if(game.status==='ready'||game.status==='play'){
+   const left=game.status==='play'?Math.max(0,game.endsAt-now):round.time, hurry=left<HURRY;
+   ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(28,70,SCREEN_W-56,4);
+   ctx.fillStyle=hurry?'#ff4d4d':accent;ctx.fillRect(28,70,(SCREEN_W-56)*left/round.time,4);
+   ctx.font=`9px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='left';ctx.fillText(`Round ${game.round+1} / ${rounds}`,28,84);
+   ctx.textAlign='right';ctx.fillStyle=hurry?'#ff8080':TEXT;ctx.fillText(`${(left/1000).toFixed(1)} s`,SCREEN_W-28,84);
+   if(game.status==='ready'){
+    centre(this.p5?`ROUND ${game.round+1}`:`Round ${game.round+1}`,128,big(26),accent);
+    centre(`${round.length} buttons · ${round.time/1000} seconds`,154,`10px ${FONT}`,TEXT);
+   }else{
+    this.tiles(game.seq,game.pos,TILE_Y,miss>0?Math.sin(now/18)*4*miss:0);
+    centre(`${game.pos} / ${game.seq.length}`,TILE_Y+44,`9.5px ${FONT}`,TEXT);
+   }
+  }
+  else if(game.status==='lost'){
+   centre(this.p5?'TIME\'S UP':'Time\'s up',118,big(24));
+   centre(`You reached round ${game.round+1} of ${rounds}.`,144,`10px ${FONT}`,TEXT);
+  }
+  else{
+   centre(this.p5?'ALL ROUNDS CLEARED':'All rounds cleared!',118,big(22),accent);
+   centre(`${ROUNDS.at(-1).length} buttons in ${ROUNDS.at(-1).time/1000} seconds. Nicely done.`,144,`10px ${FONT}`,TEXT);
+  }
+  this.noShadow();
+  const card=game.status==='title'||game.status==='lost'||game.status==='won';
+  // On the cards, tapping the screen starts (or retries); the hint in the corner always leaves.
+  if(interactive&&card)this.hits.push({x:0,y:0,w:SCREEN_W,h:SCREEN_H,action:{type:'CONFIRM'}});
+  ctx.globalAlpha=alpha;
+  this.hint({title:'✕ Start   ○ Back',lost:'✕ Retry   ○ Back',won:'✕ Play again   ○ Back'}[game.status]??'Home  Quit',interactive);
+  ctx.globalAlpha=1;
+ }
+ // A row of sequence tiles centred on y: done ones dimmed, the next one lit and a little larger.
+ tiles(seq,pos,y,shake){
+  const ctx=this.ctx, x0=(SCREEN_W-seq.length*(TILE+TILE_GAP)+TILE_GAP+TILE)/2+shake;
+  seq.forEach((button,i)=>{
+   const x=x0+i*(TILE+TILE_GAP), next=i===pos, size=next?TILE+4:TILE;
+   ctx.save();
+   if(i<pos)ctx.globalAlpha*=.3;
+   ctx.beginPath();ctx.roundRect(x-size/2,y-size/2,size,size,8);
+   ctx.fillStyle=next?'rgba(255,255,255,.2)':'rgba(0,0,0,.4)';ctx.fill();
+   if(next){ctx.shadowColor='rgba(255,255,255,.7)';ctx.shadowBlur=8*SCALE;ctx.shadowOffsetX=ctx.shadowOffsetY=0;}
+   ctx.lineWidth=next?1.6:.8;ctx.strokeStyle=next?BRIGHT:'rgba(255,255,255,.4)';ctx.stroke();
+   this.noShadow();this.glyph(button,x,y,size*.3);
+   ctx.restore();
+  });
+ }
+ // A PSP button's symbol centred on (x, y), r across: the face buttons in their colours, the D-pad as white arrows.
+ glyph(button,x,y,r){
+  const ctx=this.ctx;
+  ctx.save();ctx.translate(x,y);ctx.lineWidth=Math.max(1.2,r*.22);ctx.lineJoin=ctx.lineCap='round';
+  ctx.strokeStyle=ctx.fillStyle=FACE[button]??BRIGHT;
+  ctx.beginPath();
+  if(button==='triangle'){ctx.moveTo(0,-r);ctx.lineTo(r*.95,r*.7);ctx.lineTo(-r*.95,r*.7);ctx.closePath();ctx.stroke();}
+  else if(button==='circle'){ctx.arc(0,0,r*.85,0,Math.PI*2);ctx.stroke();}
+  else if(button==='cross'){ctx.moveTo(-r*.75,-r*.75);ctx.lineTo(r*.75,r*.75);ctx.moveTo(r*.75,-r*.75);ctx.lineTo(-r*.75,r*.75);ctx.stroke();}
+  else if(button==='square'){ctx.rect(-r*.75,-r*.75,r*1.5,r*1.5);ctx.stroke();}
+  else{
+   ctx.rotate({up:0,right:Math.PI/2,down:Math.PI,left:-Math.PI/2}[button]);
+   ctx.moveTo(0,-r);ctx.lineTo(r*.9,r*.15);ctx.lineTo(r*.38,r*.15);ctx.lineTo(r*.38,r*.9);ctx.lineTo(-r*.38,r*.9);ctx.lineTo(-r*.38,r*.15);ctx.lineTo(-r*.9,r*.15);ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
  }
  dispose(){this.texture.dispose();}
 }

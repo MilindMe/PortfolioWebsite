@@ -10,7 +10,9 @@ const output=(Array.isArray(bundle)?bundle:[bundle]).flatMap(result=>result.outp
 const {xmbReducer,initialXmb,itemSub,readingFocus,xmbSound,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
 
 const last=categories.length-1;
-const menu=(cat,item)=>({cat,item:categories.map((category,i)=>i===cat?item:0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',unlocked:true});
+const menu=(cat,item)=>({cat,item:categories.map((category,i)=>i===cat?item:0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',started:true,unlocked:true});
+// A visit past its Start screen, locked on Settings.
+const begun=()=>({...initialXmb(),started:true});
 const focus=state=>[state.cat,state.item[state.cat]];
 
 test('NEXT walks down a column, then on to the next category\'s first item',()=>{
@@ -46,14 +48,23 @@ test('NEXT and PREV step through photos without leaving the category',()=>{
 
 const settings=categories[SETTINGS].items, classics=settings.findIndex(item=>item.folder), persona5=settings.findIndex(item=>item.theme==='persona5');
 
-test('every visit starts locked on Settings with the last theme focused',()=>{
+test('every visit starts on the Start screen, which only ✕ passes',()=>{
  const state=initialXmb();
+ assert.equal(state.started,false);
+ for(const action of [{type:'DOWN'},{type:'NEXT'},{type:'BACK'},{type:'GOTO',cat:SETTINGS},{type:'FOCUS',cat:SETTINGS,item:0}])assert.equal(xmbReducer(state,action),state,action.type);
+ const started=xmbReducer(state,{type:'CONFIRM'});
+ assert.equal(started.started,true);assert.equal(started.theme,state.theme);assert.equal(started.unlocked,false);
+ assert.equal(xmbSound(state,started,{type:'CONFIRM'}),'ok');
+});
+
+test('after Start it is locked on Settings with the last theme focused',()=>{
+ const state=begun();
  assert.equal(state.unlocked,false);assert.equal(state.cat,SETTINGS);
  assert.equal(settings[state.item[SETTINGS]].folder?.[state.sub]?.theme??settings[state.item[SETTINGS]].theme,state.theme);
 });
 
 test('while locked nothing leaves Settings',()=>{
- const state=initialXmb();
+ const state=begun();
  for(const action of [{type:'LEFT'},{type:'RIGHT'},{type:'GOTO',cat:0},{type:'FOCUS',cat:0}])assert.equal(xmbReducer(state,action).cat,SETTINGS,action.type);
  const top={...state,item:state.item.map((v,i)=>i===SETTINGS?0:v)};
  assert.equal(xmbReducer(top,{type:'PREV'}).cat,SETTINGS);
@@ -62,14 +73,14 @@ test('while locked nothing leaves Settings',()=>{
 });
 
 test('picking Persona 5 applies it and unlocks the menu',()=>{
- const state={...initialXmb(),item:categories.map((c,i)=>i===SETTINGS?persona5:0)};
+ const state={...begun(),item:categories.map((c,i)=>i===SETTINGS?persona5:0)};
  const next=xmbReducer(state,{type:'CONFIRM'});
  assert.equal(next.theme,'persona5');assert.equal(next.unlocked,true);
  assert.equal(xmbReducer(next,{type:'GOTO',cat:START}).cat,START);
 });
 
 test('Classics opens as a folder of the colour themes and applies one from inside',()=>{
- const state={...initialXmb(),theme:'cobalt',item:categories.map((c,i)=>i===SETTINGS?classics:0)};
+ const state={...begun(),theme:'cobalt',item:categories.map((c,i)=>i===SETTINGS?classics:0)};
  const open=xmbReducer(state,{type:'CONFIRM'}), folder=settings[classics].folder;
  assert.equal(open.view,'folder');assert.equal(folder[open.sub].theme,'cobalt');
  assert(folder.every(entry=>entry.theme&&entry.theme!=='persona5'));
@@ -109,4 +120,13 @@ test('menu sounds follow what the action changed',()=>{
  assert.equal(sound(menu(0,0),{type:'BACK'}),null);
  // Opening a link from the menu.
  assert.equal(xmbSound(menu(0,0),menu(0,0),{type:'CONFIRM'},true),'ok');
+});
+
+test('Button Rush opens from Games, keeps the menu where it was and closes with Home',()=>{
+ const games=categories.findIndex(category=>category.id==='games'), rush=categories[games].items.findIndex(item=>item.game);
+ const open=xmbReducer(menu(games,rush),{type:'CONFIRM',button:'cross'});
+ assert.equal(open.view,'game');assert.equal(open.game.status,'title');
+ assert.equal(xmbReducer(open,{type:'LEFT',button:'left'}),open);
+ const closed=xmbReducer(open,{type:'BACK',button:'home'});
+ assert.deepEqual([closed.view,closed.game,...focus(closed)],['menu',null,games,rush]);
 });

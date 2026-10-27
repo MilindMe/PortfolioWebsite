@@ -1,6 +1,6 @@
 // Timelines for the PSP when the page changes experience, in ms. Pure maths so the scene and the tests share it.
-// 'enter' goes to a wheel experience (from the big centred PSP or another game): shake, a full flip with a dip and a hop, then the
-// framing slides the PSP aside. 'exit' flips back the other way without the shake. frame is the 0→1 mix from the
+// 'enter' goes to a game experience (from Classic or another game): shake, a full flip with a dip and a hop, then the
+// framing slides the PSP aside if the experience has a wheel. 'exit' flips back the other way without the shake. frame is the 0→1 mix from the
 // old framing to the new one.
 export const DURATION={enter:1600,exit:1100};
 // The flip's half-way point, when the screen faces away and the skin can swap unseen.
@@ -28,8 +28,8 @@ export function pose(kind,t){
  return {shakeX:0,shakeRot:0,rotY:-easeInOut(flip)*Math.PI*2,scale:1-.15*arc,hop:.12*arc,frame:easeInOut(span(t,150,800))};
 }
 
-// Which timeline moves between two experiences, or null when only the colours change.
+// Which timeline moves between two experiences, or null when only the colours change (Classic to Classic).
 export function transitionKind(from,to){
- if(from.id===to.id||(!from.wheel&&!to.wheel))return null;
- return to.wheel?'enter':'exit';
+ if(from.id===to.id)return null;
+ return to.id==='classic'?'exit':'enter';
 }
