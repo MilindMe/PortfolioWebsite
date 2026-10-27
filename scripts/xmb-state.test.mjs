@@ -57,9 +57,9 @@ test('every visit starts on the Start screen, which only ✕ passes',()=>{
  assert.equal(xmbSound(state,started,{type:'CONFIRM'}),'ok');
 });
 
-test('after Start it is locked on Settings with the last theme focused',()=>{
+test('after Start it is locked on Settings with Crimson in use and focused',()=>{
  const state=begun();
- assert.equal(state.unlocked,false);assert.equal(state.cat,SETTINGS);
+ assert.equal(state.unlocked,false);assert.equal(state.cat,SETTINGS);assert.equal(state.theme,'crimson');
  assert.equal(settings[state.item[SETTINGS]].folder?.[state.sub]?.theme??settings[state.item[SETTINGS]].theme,state.theme);
 });
 

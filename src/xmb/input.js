@@ -16,27 +16,35 @@ export function keyAction(key){
  return entry?{type:entry[0],button:entry[1]}:null;
 }
 
-// Mesh names in psp.glb and the button each one is: D-pad up/right/down/left, △, ○, ✕, □ and Home.
-export const buttonNames={button1_low:'up',button2_low:'right',button3_low:'down',button4_low:'left',button5_low:'triangle',button6_low:'circle',button7_low:'cross',button8_low:'square',button9_low:'home'};
-const menuActions={up:'UP',right:'RIGHT',down:'DOWN',left:'LEFT',cross:'CONFIRM',circle:'BACK',home:'BACK'};
+// Mesh names in psp.glb and the button each one is: D-pad up/right/down/left, △, ○, ✕, □, Home and START (a
+// stand-in, see addFaceButtons).
+export const buttonNames={button1_low:'up',button2_low:'right',button3_low:'down',button4_low:'left',button5_low:'triangle',button6_low:'circle',button7_low:'cross',button8_low:'square',button9_low:'home',start_low:'start'};
+// START confirms like ✕, so it passes the Start screen and starts Button Rush from its cards.
+const menuActions={up:'UP',right:'RIGHT',down:'DOWN',left:'LEFT',cross:'CONFIRM',circle:'BACK',home:'BACK',start:'CONFIRM'};
 // The buttons the menu uses, by mesh name. △ and □ only work in the game.
 export const buttonActions=Object.fromEntries(Object.entries(buttonNames).filter(([,button])=>menuActions[button]).map(([name,button])=>[name,menuActions[button]]));
 const meshFor=Object.fromEntries(Object.entries(buttonNames).map(([name,button])=>[button,name]));
 
-// The optimized model merges △ (button5_low) and □ (button8_low) into the body, so the game gets invisible stand-ins
-// cut from ○: the face buttons sit in a diamond, so △ is as far above its centre (✕'s x, ○'s y) as ○ is right of it,
-// and □ as far left. They take clicks and a halo; the merged buttons themselves don't move when pressed.
+// The optimized model merges △ (button5_low), □ (button8_low) and START into the body, so they get invisible
+// stand-ins. △ and □ are cut from ○: the face buttons sit in a diamond, so △ is as far above its centre (✕'s x, ○'s y)
+// as ○ is right of it, and □ as far left. START is the same half pill as Home, mirrored across the PSP's centre line
+// (x = 0) at Home's height. They take clicks and a halo; the merged buttons themselves don't move when pressed.
 export function addFaceButtons(model){
- const circle=model.getObjectByName('button6_low'), cross=model.getObjectByName('button7_low');
- if(!circle||!cross||model.getObjectByName('button5_low'))return;
  const centre=mesh=>{mesh.geometry.computeBoundingBox();mesh.updateMatrix();return mesh.geometry.boundingBox.getCenter(new THREE.Vector3()).applyMatrix4(mesh.matrix);};
- const o=centre(circle), x=centre(cross), step=o.x-x.x;
- for(const [name,dx,dy] of [['button5_low',-step,step],['button8_low',-2*step,0]]){
-  const stand=new THREE.Mesh(circle.geometry,new THREE.MeshBasicMaterial({visible:false}));
-  stand.name=name;stand.position.copy(circle.position).add(new THREE.Vector3(dx,dy,0));
-  stand.quaternion.copy(circle.quaternion);stand.scale.copy(circle.scale);
-  circle.parent.add(stand);
+ const standIn=(source,name,offset)=>{
+  if(model.getObjectByName(name))return;
+  const stand=new THREE.Mesh(source.geometry,new THREE.MeshBasicMaterial({visible:false}));
+  stand.name=name;stand.position.copy(source.position).add(offset);
+  stand.quaternion.copy(source.quaternion);stand.scale.copy(source.scale);
+  source.parent.add(stand);
+ };
+ const circle=model.getObjectByName('button6_low'), cross=model.getObjectByName('button7_low'), home=model.getObjectByName('button9_low');
+ if(circle&&cross){
+  const o=centre(circle), x=centre(cross), step=o.x-x.x;
+  standIn(circle,'button5_low',new THREE.Vector3(-step,step,0));
+  standIn(circle,'button8_low',new THREE.Vector3(-2*step,0,0));
  }
+ if(home)standIn(home,'start_low',new THREE.Vector3(-2*centre(home).x,0,0));
 }
 
 // Taps and swipes on the PSP screen drive the XMB, and clicks on the PSP's buttons press them. The mouse wheel is

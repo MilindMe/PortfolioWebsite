@@ -8,13 +8,16 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 
 | Path | What it does |
 | --- | --- |
+| `docs/content.md` | **Where every piece of content lives** and how to edit it safely. |
 | `src/xmb/content.js` | **All the content.** Categories, items, project write-ups, links, photo captions. Start here to edit the site. |
 | `src/xmb/themes.js` | Themes (Crimson is the default), the page `experiences` they belong to, `themeColors()`, `themeExperience()`, and saving the chosen theme to `localStorage`. |
 | `src/xmb/state.js` | The navigation reducer (`xmbReducer`), its initial state (`initialXmb`), and `xmbLink`, which decides when an action opens a URL. |
 | `src/xmb/XmbRenderer.js` | Draws the whole OS into an offscreen canvas that becomes the screen's texture. Owns animation, layout constants and hit boxes. |
 | `src/xmb/input.js` | Keyboard mapping (`keyAction`) and pointer handling on the 3D model (`attachScreenInput`): taps, swipes, PSP buttons. |
 | `src/xmb/icons.js` | Lucide icon outlines (ISC licence) stroked onto the canvas with `drawIcon`. |
-| `src/xmb/buttonGlow.js` | Static halos around the PSP buttons that do something, brighter on hover. |
+| `src/xmb/buttonGlow.js` | Thin glows traced from each live PSP button's own outline, brighter on hover. |
+| `src/QuickLinks.jsx` | GitHub, LinkedIn and résumé icons in the top-right corner, styled per experience. |
+| `src/LoadingScreen.jsx` | The boot screen: the XMB ribbon across the middle and "Loading" beneath. |
 | `src/xmb/XmbA11y.jsx` | Hidden semantic HTML copy of the content, plus a live region announcing the focused item. |
 | `src/MemoriesScene.jsx` | The three.js scene. Loads `public/models/psp-v3.glb` (lazy-loaded chunk), puts the XMB texture on the screen mesh, runs the render loop, and owns the camera. |
 | `src/PageWheel.jsx` | The Persona 5–style page wheel beside the PSP, shown by experiences with `wheel`. It mirrors the XMB's current category and can jump to one. |
@@ -26,7 +29,7 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | `src/useWheelBox.js` | The strip `stageInsets()` leaves for a wheel, shared by both wheels. |
 | `src/App.jsx` | Page shell. Holds the XMB state with `useReducer`, opens links, and renders the active experience's wheel and extras. |
 | `public/memories/` | Photos for the Memories category. |
-| `public/resume.pdf` | Résumé linked from Contact. |
+| `public/resume.pdf` | Résumé linked from About, Experience, Contact and the quick links. It always downloads as `RESUME_FILE`: `App.jsx` saves it instead of opening a tab, and `public/_headers` makes Cloudflare Pages send it as an attachment. |
 
 ## How it fits together
 
@@ -55,7 +58,7 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 ```
 
 - **Start screen**: every visit starts with `started: false`. The screen shows only its backdrop (in the saved theme's colours), the status bar and a pulsing **START**, with "Press Start" under the PSP. Only `CONFIRM` does anything (✕, Enter, or a tap anywhere on the screen, which is one big hit box); it sets `started`, plays `ok`, and the Settings menu fades in.
-- **Theme first**: after Start, the visit is `unlocked: false` on **Settings**, with the last theme focused (inside Classics if it lives there). While locked, only Settings is drawn and nothing can leave it. Applying any theme sets `unlocked`, the other categories fade in, and `App.jsx` moves to **About** (`START`) once any transition has played. Until then the page shows "Select a theme first" under the PSP, in Michroma (self-hosted, a wide geometric face like the PlayStation wordmark), and the layout is always Classic.
+- **Theme first**: after Start, the visit is `unlocked: false` on **Settings**, on Crimson (`DEFAULT_THEME`), focused inside the Classics folder. While locked, only Settings is drawn and nothing can leave it. Applying any theme sets `unlocked`, the other categories fade in, and `App.jsx` moves to **About** (`START`) once any transition has played. Until then the page shows "Select a theme first" under the PSP, in Michroma (self-hosted, a wide geometric face like the PlayStation wordmark), and the layout is always Classic.
 - `view: 'folder'` lists a folder item's entries (`item.folder`), with `sub` the focused one. The column slides left, keeping just the folder icon, and the entries open to its right like a PSP folder. `LEFT`/`BACK` or tapping the folder icon closes it.
 
 - `item` remembers the focused item in **every** category, so going left and right returns you to where you were, like the real XMB.
@@ -135,7 +138,7 @@ Every draw rebuilds `this.hits`: rectangles in logical units, each carrying the 
 - **Settings column**: `content.js` builds the **Settings** category from `themes`. The Classic themes go into a **Classics** folder item (`folder: [...]`); every other experience gets its own item. Theme items carry `theme: id`.
   - Confirming one sets `state.theme` (and `unlocked`).
   - `itemSub()` in `state.js` shows "✓ In use" under the active theme, and "✓ Cobalt in use" under the folder holding it. Both the renderer and the screen-reader announcement use it.
-- **Saving**: `initialXmb()` reads the saved theme with `savedTheme()`, and `App.jsx` writes it back with `saveTheme()` whenever it changes. Both wrap `localStorage` in try/catch, so private windows simply fall back to Crimson.
+- **Not saved**: themes don't carry over between visits. `initialXmb()` always starts on `DEFAULT_THEME`, so the locked theme picker never shows a half-applied theme from last time.
 - **Cross-fade**: `tick()` eases the displayed backdrop colours (`shown.top`, `shown.bottom`) channel by channel toward `themeColors(state.theme)`, so switching themes fades rather than snaps.
 - **Adding a theme**: add an entry to `themes` with `experience: 'classic'`. It appears in the Classics folder automatically.
 
@@ -201,7 +204,7 @@ const PSP_HALF_WIDTH=1.5, PSP_HALF_HEIGHT=.7;
 
 ## Input (`input.js`)
 
-**Keyboard** (`keyAction`). The listener is on `window`, but it only acts when focus is on the page body or the 3D canvas, so the lighting slider keeps its arrow keys.
+**Keyboard** (`keyAction`). The listener is on `window`, but it only acts when focus is on the page body or the 3D canvas, so buttons and links on the page keep their own keys.
 
 | Keys | Action |
 | --- | --- |
@@ -225,15 +228,16 @@ Pressing a mapped key also animates the matching PSP button.
   | `button7_low` | ✕ | CONFIRM |
   | `button6_low` | ○ | BACK |
   | `button9_low` | Home | BACK |
+  | `start_low` | START | CONFIRM |
 
-  `button5_low` (△) and `button8_low` (□) are unmapped. A press nudges the mesh along local z for 120 ms. The map is exported as `buttonActions`.
+  The model merges △, □ and START into the body, so `addFaceButtons` adds invisible stand-ins: △ (`button5_low`) and □ (`button8_low`) are cut from ○ and placed in the face-button diamond, and `start_low` is Home's half pill mirrored across the PSP's centre line. △ and □ are unmapped outside Button Rush; START passes the Start screen and starts or retries Button Rush, and is ignored mid-round. A press nudges the mesh along local z for 120 ms. The map is exported as `buttonActions`.
 - **Button glow** (`buttonGlow.js`):
   - Every button in `buttonActions` gets a halo: a quad sitting just above the button.
   - All the halos share one ring texture, transparent in the middle so the button stays visible, drawn with additive blending, `depthWrite: false` and no raycasting.
   - The glow is static at 0.4 opacity and rises to 0.95 on hover. `input.js` reports the hovered button through `onHoverButton`, and the scene re-renders only then.
   - The cost is seven extra quads and no post-processing.
 - **Off the PSP**: while rotation is locked, a vertical swipe that starts off the model sends `NEXT` (up) or `PREV` (down).
-- **Page scroll**: `MemoriesScene` listens for `wheel` on the whole window (except the lighting panel and pinch-zoom) and sends `NEXT` / `PREV`. 40 px of delta is one step, a 200 ms pause resets the count, and steps are at least 140 ms apart so trackpad momentum doesn't race through the menu.
+- **Page scroll**: `MemoriesScene` listens for `wheel` on the whole window (except pinch-zoom) and sends `NEXT` / `PREV`. 40 px of delta is one step, a 200 ms pause resets the count, and steps are at least 140 ms apart so trackpad momentum doesn't race through the menu.
 - **Orbit conflict**: the pointerdown listener runs in the **capture** phase. When it hits the screen or a button, it sets `controls.enabled = false` for that gesture, before OrbitControls sees the event. This only matters when rotation is unlocked.
 
 ## Saved effects (`src/effects/`)
@@ -315,7 +319,7 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 - With rotation locked, dragging and Shift+arrows do nothing.
 - The PSP loads centred at about 80% of the page with no wheel, on the Start screen with "Press Start" underneath. Arrows and scrolling do nothing; ✕, Enter or a tap shows Settings only, with "Select a theme first" underneath. Left/right and scrolling can't leave Settings.
 - Classics opens as a folder of the colour themes. Picking any theme fades in the other categories and moves to About; scrolling then walks down the items and on into the next category.
-- The screen is red by default. Picking a Classic theme fades the backdrop to it, and the next visit starts on that theme (still locked).
+- The screen is red by default. Picking a Classic theme fades the backdrop to it. Reloading always starts back on red Crimson, whatever theme was picked.
 - Picking Persona 5 shakes, flips and shrinks the PSP, plays the calling card, swings the wheel in and turns the page and screen red and black. Picking a Classic theme flips it back.
 - Picking Grand Theft Auto flips the PSP, plays the cutscene, then shows the Vice City page, the cash bar top right and the skyline skin, with the PSP still centred. Clearing a Button Rush round adds its payout with a `+$` line, and the total survives a reload.
 - Picking Black Ops II shows the smoky backdrop, the main menu and Nuketown on the PSP. Clicking a page in the menu drives the PSP.

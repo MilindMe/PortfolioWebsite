@@ -27,6 +27,8 @@ const NUKETOWN='/experiences/bo2/nuketown.jpg', BO2_ORANGE='#f47b20';
 // Button Rush: the PSP's face-button colours, the sequence tiles' size and row, and when the clock turns red (ms left).
 const FACE={triangle:'#4fd1a5',circle:'#ff6b72',cross:'#7eb4ff',square:'#f39ad6'};
 const TILE=40, TILE_GAP=8, TILE_Y=146, HURRY=1500;
+// A right button pops its tile for HIT_FOR ms: it swells and settles, and a ring in the button's colour spreads out.
+const HIT_FOR=380;
 // The title card's key legend, in the order the buttons are shown.
 const LEGEND=[['up','↑ W'],['right','→ D'],['down','↓ S'],['left','← A'],['triangle','I'],['square','J'],['cross','K X'],['circle','L O']];
 
@@ -552,8 +554,7 @@ export class XmbRenderer{
   const big=size=>this.p5?`${size+4}px ${P5_FONT}`:`bold ${size}px ${FONT}`;
   this.shadow(2);
   if(game.status==='title'){
-   centre('Press the buttons in order before time runs out.',94,`11px ${FONT}`);
-   centre(`${rounds} rounds, from ${ROUNDS[0].length} buttons to ${ROUNDS.at(-1).length}. A wrong button starts the sequence over.`,112,`9px ${FONT}`,TEXT);
+   centre('Press the buttons shown, in order.',104,`11px ${FONT}`);
    const step=40, x0=SCREEN_W/2-step*(LEGEND.length-1)/2;
    LEGEND.forEach(([button,key],i)=>{
     const x=x0+i*step;
@@ -571,10 +572,9 @@ export class XmbRenderer{
    ctx.font=`9px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='left';ctx.fillText(`Round ${game.round+1} / ${rounds}`,28,84);
    ctx.textAlign='right';ctx.fillStyle=hurry?'#ff8080':TEXT;ctx.fillText(`${(left/1000).toFixed(1)} s`,SCREEN_W-28,84);
    if(game.status==='ready'){
-    centre(this.p5?`ROUND ${game.round+1}`:`Round ${game.round+1}`,128,big(26),accent);
-    centre(`${round.length} buttons · ${round.time/1000} seconds`,154,`10px ${FONT}`,TEXT);
+    centre(this.p5?`ROUND ${game.round+1}`:`Round ${game.round+1}`,136,big(26),accent);
    }else{
-    this.tiles(game.seq,game.pos,TILE_Y,miss>0?Math.sin(now/18)*4*miss:0);
+    this.tiles(game.seq,game.pos,TILE_Y,miss>0?Math.sin(now/18)*4*miss:0,game.hitAt?(now-game.hitAt)/HIT_FOR:1);
     centre(`${game.pos} / ${game.seq.length}`,TILE_Y+44,`9.5px ${FONT}`,TEXT);
    }
   }
@@ -583,8 +583,7 @@ export class XmbRenderer{
    centre(`You reached round ${game.round+1} of ${rounds}.`,144,`10px ${FONT}`,TEXT);
   }
   else{
-   centre(this.p5?'ALL ROUNDS CLEARED':'All rounds cleared!',118,big(22),accent);
-   centre(`${ROUNDS.at(-1).length} buttons in ${ROUNDS.at(-1).time/1000} seconds. Nicely done.`,144,`10px ${FONT}`,TEXT);
+   centre(this.p5?'ALL ROUNDS CLEARED':'All rounds cleared!',128,big(22),accent);
   }
   this.noShadow();
   const card=game.status==='title'||game.status==='lost'||game.status==='won';
@@ -594,13 +593,20 @@ export class XmbRenderer{
   this.hint({title:'✕ Start   ○ Back',lost:'✕ Retry   ○ Back',won:'✕ Play again   ○ Back'}[game.status]??'Home  Quit',interactive);
   ctx.globalAlpha=1;
  }
- // A row of sequence tiles centred on y: done ones dimmed, the next one lit and a little larger.
- tiles(seq,pos,y,shake){
+ // A row of sequence tiles centred on y: done ones dimmed, the next one lit and a little larger. hit (0→1) is how far
+ // the last right button's pop has played: its tile swells and fades back, and a ring in its colour spreads out.
+ tiles(seq,pos,y,shake,hit=1){
   const ctx=this.ctx, x0=(SCREEN_W-seq.length*(TILE+TILE_GAP)+TILE_GAP+TILE)/2+shake;
   seq.forEach((button,i)=>{
-   const x=x0+i*(TILE+TILE_GAP), next=i===pos, size=next?TILE+4:TILE;
+   const x=x0+i*(TILE+TILE_GAP), next=i===pos, popping=i===pos-1&&hit<1;
+   const pop=popping?Math.sin(Math.PI*Math.min(1,hit*1.6))*8:0, size=(next?TILE+4:TILE)+pop;
    ctx.save();
-   if(i<pos)ctx.globalAlpha*=.3;
+   if(popping){
+    const ring=TILE/2+hit*TILE*.55;
+    ctx.save();ctx.globalAlpha*=(1-hit)*.9;ctx.lineWidth=2.2*(1-hit)+.4;ctx.strokeStyle=FACE[button]??BRIGHT;
+    ctx.beginPath();ctx.roundRect(x-ring,y-ring,ring*2,ring*2,8+hit*10);ctx.stroke();ctx.restore();
+   }
+   if(i<pos)ctx.globalAlpha*=popping?1-.7*hit:.3;
    ctx.beginPath();ctx.roundRect(x-size/2,y-size/2,size,size,8);
    ctx.fillStyle=next?'rgba(255,255,255,.2)':'rgba(0,0,0,.4)';ctx.fill();
    if(next){ctx.shadowColor='rgba(255,255,255,.7)';ctx.shadowBlur=8*SCALE;ctx.shadowOffsetX=ctx.shadowOffsetY=0;}

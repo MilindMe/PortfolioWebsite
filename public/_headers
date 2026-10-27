@@ -1,0 +1,3 @@
+# Cloudflare Pages headers. The résumé always downloads, even when its URL is opened directly.
+/resume.pdf
+  Content-Disposition: attachment; filename="Milind-Meetarbhan-Resume.pdf"

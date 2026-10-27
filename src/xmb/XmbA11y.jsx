@@ -1,17 +1,20 @@
 import React from 'react';
-import {categories} from './content';
+import {RESUME_FILE, RESUME_URL, categories} from './content';
 import {currentItem, focusedEntry, itemSub} from './state';
 import {BUTTON_LABELS, ROUNDS} from './game';
 
 // What Button Rush is showing: the rules, the round's sequence and progress, or how it ended.
 function gameText({status,round,seq,pos}){
  const of=`Round ${round+1} of ${ROUNDS.length}`;
- if(status==='title')return 'Button Rush. Press the PSP buttons shown, in order, before the timer runs out. Arrow keys are the D-pad; I, J, K and L are Triangle, Square, Cross and Circle. Press Cross to start, Circle to leave.';
- if(status==='ready')return `${of}. ${ROUNDS[round].length} buttons in ${ROUNDS[round].time/1000} seconds. Get ready.`;
+ if(status==='title')return 'Button Rush. Press the buttons shown, in order. Arrow keys are the D-pad; I, J, K and L are Triangle, Square, Cross and Circle. Press Cross to start, Circle to leave.';
+ if(status==='ready')return `${of}. Get ready.`;
  if(status==='play')return `${of}: ${seq.slice(pos).map(button=>BUTTON_LABELS[button]).join(', ')}. ${pos} of ${seq.length} done.`;
  if(status==='lost')return `Time's up on round ${round+1}. Press Cross to try again, Circle to leave.`;
  return `All ${ROUNDS.length} rounds cleared. Press Cross to play again, Circle to leave.`;
 }
+
+// Link attributes for the hidden copy: the résumé downloads, everything else opens in a new tab.
+const linkProps=url=>url===RESUME_URL?{download:RESUME_FILE}:{target:'_blank',rel:'noopener'};
 
 // A detail page as plain text: its body, or its blocks flattened in reading order.
 function pageText(detail){
@@ -47,11 +50,11 @@ const Contents=React.memo(function Contents(){
  return categories.map(category => <section key={category.id} aria-label={category.label}>
    <h2>{category.label}</h2>
    <ul>{category.items.map(item => <li key={item.id}>
-    {item.link ? <a href={item.link} target="_blank" rel="noopener">{item.label}{item.sub ? ` — ${item.sub}` : ''}</a> : <h3>{item.detail?.title ?? item.label}</h3>}
+    {item.link ? <a href={item.link} {...linkProps(item.link)}>{item.label}{item.sub ? ` — ${item.sub}` : ''}</a> : <h3>{item.detail?.title ?? item.label}</h3>}
     {item.detail && <DetailBody detail={item.detail} />}
     {item.caption && <p>{item.caption}</p>}
     {item.folder && <ul>{item.folder.map(entry => <li key={entry.id}>{entry.label}</li>)}</ul>}
-    {item.detail?.links?.map(link => <a key={link.url + link.label} href={link.url} target="_blank" rel="noopener">{link.label}</a>)}
+    {item.detail?.links?.map(link => <a key={link.url + link.label} href={link.url} {...linkProps(link.url)}>{link.label}</a>)}
    </li>)}</ul>
   </section>);
 });

@@ -24,16 +24,19 @@ See [`docs/xmb.md`](docs/xmb.md) for how the PSP OS works and where everything l
 
 - **Menu:** arrow keys or WASD move, Enter / Space / X opens, Esc / Backspace / O goes back.
 - **On the screen:** tap an item to focus it, tap again to open it; swipe to move; scroll the wheel over the screen to move through items.
-- **PSP buttons:** click the D-pad, ✕ (open), ○ (back) or Home (back).
+- **PSP buttons:** click the D-pad, ✕ (open), ○ (back), Home (back) or START (same as ✕; passes the Start screen).
 - **Phones:** a one-time notice recommends a desktop. The page is laid out landscape with a slimmer wheel on the left; held upright it turns a quarter turn so the PSP stands on its side, ready for the phone to be turned sideways (`PHONE` in `src/layout.js`). Taps and swipes on the PSP work; lighting controls are hidden.
 - **Camera:** rotation is locked for now (`ROTATION_LOCKED` in `src/layout.js`). When unlocked, drag anywhere off the screen or use Shift + arrow keys.
 
 ## Editing the content
 
+**See [`docs/content.md`](docs/content.md)** for where every piece of text, link and image lives, what to keep in `content.js`, and a checklist before committing. The short version:
+
+
 - `src/xmb/content.js`: every category and item, including project write-ups, links and photo captions.
 - `src/xmb/themes.js`: backdrop colour themes, shown in the XMB's Settings column (Crimson by default).
 - `public/memories/`: photos referenced by the Memories items (until a file exists the screen shows where to add it). Use WebP at most 960 px wide, the width of the screen texture.
-- `public/resume.pdf`: the résumé linked from Contact.
+- `public/resume.pdf`: the résumé linked from Contact and the quick links; it downloads rather than opening (`public/_headers` sets it as an attachment on Cloudflare Pages).
 
 ## Files
 

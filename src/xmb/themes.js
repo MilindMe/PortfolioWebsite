@@ -39,12 +39,3 @@ export function themeColors(id){
 export function themeExperience(id){
  return experiences[find(id).experience]??experiences.classic;
 }
-
-const STORAGE_KEY='xmb-theme';
-export function savedTheme(){
- try{const id=localStorage.getItem(STORAGE_KEY);return themes.some(theme=>theme.id===id)?id:DEFAULT_THEME;}
- catch{return DEFAULT_THEME;}
-}
-export function saveTheme(id){
- try{localStorage.setItem(STORAGE_KEY,id);}catch{}
-}

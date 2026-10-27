@@ -31,7 +31,7 @@ test('the right buttons advance, a wrong one starts the sequence over',()=>{
  let game=playing();
  game=gameReducer(game,at(10,{type:'UP',button:'up'}));
  game=gameReducer(game,at(20,{type:'CONFIRM',button:'cross'}));
- assert.equal(game.pos,2);
+ assert.equal(game.pos,2);assert.equal(game.hitAt,20,'a right button stamps hitAt for the pop');
  game=gameReducer(game,at(30,{type:'PRESS',button:'triangle'}));
  assert.equal(game.pos,0);assert.equal(game.missAt,30);assert.equal(game.status,'play');
 });
@@ -82,4 +82,10 @@ test('clearing a round pays its payout; other moves pay nothing',()=>{
  assert.equal(roundPay(game,gameReducer(game,at(0,{type:'TICK'}))),0);
  assert.equal(roundPay(game,null),0);
  assert.equal(roundPay(null,newGame()),0);
+});
+
+test('START starts and retries like ✕, but mid-round it is not a miss',()=>{
+ assert.equal(gameReducer(newGame(),at(0,{type:'CONFIRM',button:'start'})).status,'ready');
+ const game=playing();
+ assert.equal(gameReducer(game,at(10,{type:'CONFIRM',button:'start'})),game);
 });

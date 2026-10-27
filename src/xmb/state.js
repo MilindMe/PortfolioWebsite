@@ -1,5 +1,5 @@
 import {categories} from './content';
-import {savedTheme} from './themes';
+import {DEFAULT_THEME} from './themes';
 import {gameReducer, gameSound, newGame} from './game';
 
 export const SETTINGS=categories.findIndex(category=>category.id==='settings');
@@ -12,9 +12,9 @@ export const START=categories.findIndex(category=>category.id==='about');
 // item[] remembers the focused item in every category, like the real XMB. theme is the backdrop (see themes.js).
 // Every visit starts on the Start screen (started false): just the backdrop and a Start prompt, which ✕ or a tap
 // passes. Then it is locked on Settings: only that category shows until a theme is picked, which sets unlocked.
-// The last theme used is focused, inside the Classics folder if it lives there.
+// Themes don't carry over between visits: every visit starts on Crimson, focused inside the Classics folder.
 export function initialXmb(){
- const theme=savedTheme(), settings=categories[SETTINGS].items;
+ const theme=DEFAULT_THEME, settings=categories[SETTINGS].items;
  const inFolder=settings.findIndex(item=>item.folder?.some(entry=>entry.theme===theme));
  const index=inFolder>=0?inFolder:Math.max(0,settings.findIndex(item=>item.theme===theme));
  const item=categories.map(()=>0);item[SETTINGS]=index;

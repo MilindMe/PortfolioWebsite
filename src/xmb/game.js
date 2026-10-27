@@ -12,10 +12,11 @@ export const PAYOUTS=[250,500,1000,2500];
 export const BUTTON_LABELS={up:'Up',right:'Right',down:'Down',left:'Left',triangle:'Triangle',circle:'Circle',cross:'Cross',square:'Square'};
 
 // status: 'title' before the first round, 'ready' while a round's card shows (until startsAt), 'play' while its timer
-// runs (until endsAt), then 'lost', or 'won' after the last round. pos is how far into seq the player is, and missAt
-// is when the last wrong button was pressed, so the screen can flash.
+// runs (until endsAt), then 'lost', or 'won' after the last round. pos is how far into seq the player is, hitAt is
+// when the last right button was pressed, so its tile can pop, and missAt when the last wrong one was, so the screen
+// can flash.
 
-export const newGame=()=>({status:'title',round:0,seq:[],pos:0,startsAt:0,endsAt:0,missAt:0});
+export const newGame=()=>({status:'title',round:0,seq:[],pos:0,startsAt:0,endsAt:0,hitAt:0,missAt:0});
 
 // Random Sequence Generator.
 // TODO : ALLOW TWO BUTTONS IN A ROW? 
@@ -32,7 +33,7 @@ function roll(){
 // runs every action through this before reducing.
 export const withClock=(state,action)=>state.view==='game'?{...action,now:performance.now(),roll:roll()}:action;
 
-const ready=(round,{now,roll})=>({status:'ready',round,seq:roll.slice(0,ROUNDS[round].length),pos:0,startsAt:now+READY_FOR,endsAt:0,missAt:0});
+const ready=(round,{now,roll})=>({status:'ready',round,seq:roll.slice(0,ROUNDS[round].length),pos:0,startsAt:now+READY_FOR,endsAt:0,hitAt:0,missAt:0});
 
 // Returns the next game, or null to leave it. Actions carry button when they came from a PSP button or its key:
 // Home (and Esc) always quits, ✕ starts or retries and ○ leaves from the title, lost and won cards. A BACK with no
@@ -54,10 +55,11 @@ export function gameReducer(game,action){
   return action.type==='CONFIRM'||button==='cross'?ready(0,action):game;
  }
  
- if(game.status!=='play'||!button)return game;
+ // START only starts and retries; mid-round it isn't one of the sequence's buttons, so it doesn't count as a miss.
+ if(game.status!=='play'||!button||button==='start')return game;
  if(action.now>=game.endsAt)return {...game,status:'lost'};
  if(button!==game.seq[game.pos])return {...game,pos:0,missAt:action.now};
- if(game.pos+1<game.seq.length)return {...game,pos:game.pos+1};
+ if(game.pos+1<game.seq.length)return {...game,pos:game.pos+1,hitAt:action.now};
  return game.round+1<ROUNDS.length?ready(game.round+1,action):{...game,pos:game.seq.length,status:'won'};
 }
 

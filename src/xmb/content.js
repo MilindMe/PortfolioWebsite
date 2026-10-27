@@ -2,8 +2,9 @@ import {themes} from './themes';
 
 const themeItem=theme=>({id:`theme-${theme.id}`, label:theme.label, sub:theme.sub, icon:'palette', theme:theme.id});
 
-// The résumé PDF, linked from About, Experience and Contact. Drop the file at public/resume.pdf.
-export const RESUME_URL='/resume.pdf';
+// The résumé PDF, linked from About, Experience, Contact and the quick links. Drop the file at public/resume.pdf;
+// it is served as a static file and always downloads (as RESUME_FILE), never opens in a tab (see public/_headers).
+export const RESUME_URL='/resume.pdf', RESUME_FILE='Milind-Meetarbhan-Resume.pdf';
 const resume={label:'Résumé', url:RESUME_URL, icon:'resume'};
 
 // Everything the PSP's XMB shows. Edit freely; the screen and the screen-reader copy both read from here.
@@ -81,7 +82,7 @@ export const categories = [
  {
   id:'contact', label:'Contact', icon:'network',
   items:[
-   {id:'email', label:'Email', sub:'hello@example.com', icon:'mail', link:'mailto:hello@example.com'},
+   {id:'email', label:'Email', sub:'msmeetar@uwaterloo.ca', icon:'mail', link:'mailto:msmeetar@uwaterloo.ca'},
    {id:'github', label:'GitHub', sub:'github.com/MilindMe', icon:'github', link:'https://github.com/MilindMe'},
    {id:'linkedin', label:'LinkedIn', sub:'Connect with me', icon:'linkedin', link:'https://www.linkedin.com/MilindMeetarbhan'},
    {id:'resume', label:'Résumé', sub:'PDF', icon:'resume', link:RESUME_URL},

@@ -3,11 +3,12 @@ import {RefreshCw, RotateCcw, Volume2, VolumeX} from 'lucide-react';
 import LoadingScreen from './LoadingScreen';
 import {lightingModes} from './lighting';
 import {START, initialXmb, readingFocus, xmbLink, xmbReducer, xmbSound} from './xmb/state';
-import {categories} from './xmb/content';
+import {RESUME_FILE, RESUME_URL, categories} from './xmb/content';
 import XmbA11y from './xmb/XmbA11y';
 import {gameDue, roundPay, withClock} from './xmb/game';
-import {experiences, saveTheme, themeColors, themeExperience} from './xmb/themes';
+import {experiences, themeColors, themeExperience} from './xmb/themes';
 import PageWheel from './PageWheel';
+import QuickLinks from './QuickLinks';
 import {PHONE, ROTATION_LOCKED} from './layout';
 import PhoneNotice from './PhoneNotice';
 import TrophyToast from './TrophyToast';
@@ -51,6 +52,14 @@ function BrightnessIcon() {
   </svg>;
 }
 
+// Saves the résumé instead of opening it in a tab, from inside the click or key event that asked for it.
+function downloadResume() {
+  const link = document.createElement('a');
+  link.href = RESUME_URL;
+  link.download = RESUME_FILE;
+  link.click();
+}
+
 class SceneBoundary extends React.Component {
   state = {failed: false};
   static getDerivedStateFromError() { return {failed: true}; }
@@ -64,6 +73,8 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [reset, setReset] = useState(0);
   const [lightMode, setLightMode] = useState('golden');
+  // How many times the lighting control has been pressed; its icon turns a third of the way round each time.
+  const [lightTurns, setLightTurns] = useState(0);
   const [splash, setSplash] = useState(true);
   const reportProgress = useCallback(value => setProgress(previous => Math.max(previous, value * .94)), []);
   const reportError = useCallback(() => setStatus('error'), []);
@@ -79,7 +90,8 @@ export default function App() {
   // cleared round pays out. Returns the new state, so the scene can draw it without waiting for React.
   const xmbAction = useCallback((input, {silent = false} = {}) => {
     const previous = xmbRef.current, action = withClock(previous, input), url = xmbLink(previous, action);
-    if (url?.startsWith('mailto:')) location.href = url;
+    if (url === RESUME_URL) downloadResume();
+    else if (url?.startsWith('mailto:')) location.href = url;
     else if (url) open(url, '_blank', 'noopener');
     xmbRef.current = xmbReducer(previous, action);
     if (!silent) playSound(xmbSound(previous, xmbRef.current, action, !!url));
@@ -102,7 +114,6 @@ export default function App() {
     setMutedState(!muted);
     if (muted) playSound('ok');
   }
-  useEffect(() => saveTheme(xmb.theme), [xmb.theme]);
 
   // Before a theme is picked the name can't leave Settings (or the Start screen), so it nudges the prompt instead.
   const [nudge, setNudge] = useState(0);
@@ -157,6 +168,10 @@ export default function App() {
   }
 
   const mode = lightingModes.find(mode => mode.id === lightMode);
+  function nextLight() {
+    setLightMode(lightingModes[(lightingModes.indexOf(mode) + 1) % lightingModes.length].id);
+    setLightTurns(value => value + 1);
+  }
   const Wheel = wheels[experience.wheel], CutIn = cutIns[experience.id];
   // Pages worth reading in full tuck the wheel away and let the PSP grow back to its big framing; the mini game tucks
   // it away too and lets the PSP fill the page.
@@ -182,6 +197,7 @@ export default function App() {
       <button className="site-name" onClick={openAbout} title="About me" style={xmb.unlocked ? {'--accent': NAME_ACCENTS[experience.id] ?? themeColors(xmb.theme)[0]} : undefined}>
         {experience.id === 'gta' ? <img className="site-name-art" src={GTA_NAME} alt="Milind Meetarbhan" /> : 'Milind Meetarbhan'}
       </button>
+      <QuickLinks />
       <p key={nudge} className={`theme-prompt${xmb.unlocked ? ' done' : ''}${nudge ? ' nudge' : ''}`} aria-hidden="true">{xmb.started ? 'Select a theme first' : 'Press Start'}</p>
       <XmbA11y state={xmb} />
       {status === 'error' && <button className="scene-status retry" onClick={retry} aria-label="Unable to load the PSP. Retry" title="Unable to load the PSP. Retry"><RefreshCw size={24} /></button>}
@@ -190,17 +206,9 @@ export default function App() {
         {muted ? <VolumeX size={18} strokeWidth={1.5} /> : <Volume2 size={18} strokeWidth={1.5} />}
       </button>
       <TrophyToast />
-      {/* The lighting popover opens in the top layer, outside the phone layout's page turn, so phones go without it. */}
-      {!PHONE && <>
-        <button className="light-toggle" popoverTarget="scene-light-panel" aria-label={`Lighting: ${mode.label}. Adjust lighting`} title="Adjust lighting"><BrightnessIcon /></button>
-        <div id="scene-light-panel" className="light-panel" popover="auto">
-          <div className="light-slider-layout">
-            <input type="range" min="0" max="2" step="1" value={lightingModes.indexOf(mode)} onChange={event => setLightMode(lightingModes[Number(event.target.value)].id)} aria-label="Scene lighting mode" aria-valuetext={mode.label} aria-orientation="vertical" list="light-mode-stops" />
-            <datalist id="light-mode-stops"><option value="0" /><option value="1" /><option value="2" /></datalist>
-            <div className="light-stop-labels" aria-hidden="true">{[...lightingModes].reverse().map(mode => <span key={mode.id}>{mode.label}</span>)}</div>
-          </div>
-        </div>
-      </>}
+      {/* Each press steps to the next lighting mode, wrapping round. Phones go without it: their layout has no room. */}
+      {!PHONE && <button className="light-toggle" onClick={nextLight} style={{'--turn': `${lightTurns * 120}deg`}}
+        aria-label={`Lighting: ${mode.label}. Change lighting`} title={`Lighting: ${mode.label}`}><BrightnessIcon /></button>}
     </main>
     {splash && <LoadingScreen progress={progress} />}
     {PHONE && <PhoneNotice />}

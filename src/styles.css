@@ -11,46 +11,40 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .page { position: relative; height: 100%; }
 .scene { position: absolute; inset: 0; }
 .scene canvas { width: 100%; height: 100%; display: block; }
-.reset-view, .light-toggle, .sound-toggle { position: absolute; z-index: 4; right: 26px; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #ffffff2e; border-radius: 50%; background: radial-gradient(circle at 35% 28%, #3a3a40 0%, #141417 55%, #050506 100%); color: #e4e4ea; box-shadow: 0 3px 10px #000000b0, inset 0 1px 1px #ffffff40, inset 0 -2px 4px #00000080; transition: color .2s, box-shadow .2s; }
+/* The corner controls are bare logos like the quick links: off-white with a soft shadow, brightening on hover. */
+.reset-view, .light-toggle, .sound-toggle { position: absolute; z-index: 4; right: 26px; width: 40px; height: 40px; display: grid; place-items: center; color: #f5f5f7; opacity: .82; filter: drop-shadow(0 1px 6px #00000080); transition: opacity .25s, color .25s, transform .25s; }
+.reset-view:focus-visible, .light-toggle:focus-visible, .sound-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 6px; }
 .reset-view { bottom: 26px; }
-.reset-view:hover, .light-toggle:hover, .sound-toggle:hover, .light-toggle:has(+ .light-panel:popover-open) { color: #fff; box-shadow: 0 0 12px #ffffff40, 0 3px 10px #000000b0, inset 0 1px 1px #ffffff55, inset 0 -2px 4px #00000080; }
+.reset-view:hover, .light-toggle:hover, .sound-toggle:hover { color: #fff; opacity: 1; }
+/* Each press of the lighting control turns its icon a little, as it steps to the next mode. */
+.light-toggle svg { transition: transform .4s cubic-bezier(.3,1.4,.5,1); transform: rotate(var(--turn, 0deg)); }
 .scene-status { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #cdbb95; display: grid; place-items: center; width: 52px; height: 52px; }
 .retry { border: 1px solid #d7ceb433; border-radius: 50%; background: #20372bd9; }
 .memories-stage{position:absolute;inset:0;background:radial-gradient(ellipse at 62% 48%,#111113 0%,#070708 55%,#020202 100%);overflow:hidden}
 .memories-stage>canvas{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:none}
 .memories-stage>canvas:active{cursor:grabbing}
 .memories-stage>canvas:focus-visible{outline:1px solid #ddd;outline-offset:-8px}
-.loading-screen{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;overflow:hidden;cursor:wait;color:#e9e9ee;
- background:radial-gradient(ellipse at 50% 45%,#16161a 0%,#0a0a0c 55%,#030304 100%)}
-.loading-wave{position:absolute;left:-10%;width:120%;top:50%;height:46vh;transform:translateY(-50%);opacity:.55;animation:loading-wave 9s ease-in-out infinite alternate}
-.loading-wave path{fill:none;stroke:#ffffff;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.35}
-.loading-wave path:nth-child(2){opacity:.18;stroke-width:6;filter:blur(4px)}
-.loading-wave path:nth-child(3){opacity:.22}
-.loading-body{position:relative;width:min(320px,calc(100vw - 32px));text-align:center}
+.loading-screen{position:fixed;inset:0;z-index:1000;overflow:hidden;cursor:wait;color:#e9e9ee;background:linear-gradient(180deg,#141418 0%,#08080a 100%)}
+/* The XMB ribbon across the middle: each band is twice the page wide and slides half its width per loop. */
+.loading-ribbon{position:absolute;left:0;right:0;top:50%;height:min(40vh,360px);transform:translateY(-50%)}
+.loading-ribbon svg{position:absolute;top:0;left:0;width:200%;height:100%;overflow:visible;mix-blend-mode:screen;animation:loading-ribbon var(--loop) linear infinite var(--dir)}
+.loading-ribbon .band{fill:#fff}
+.loading-ribbon .edge{fill:none;stroke:#fff;stroke-width:.8;vector-effect:non-scaling-stroke}
+.loading-body{position:absolute;left:16px;right:16px;top:calc(50% + min(11vh,100px));text-align:center}
 .loading-title{margin:0 0 14px;font:400 18px/1 Michroma,"Arial Black",sans-serif;letter-spacing:.22em;text-transform:uppercase}
 .loading-dots i{font-style:normal;animation:loading-dot 1.4s infinite both}
 .loading-dots i:nth-child(2){animation-delay:.2s}
 .loading-dots i:nth-child(3){animation-delay:.4s}
-.loading-bar{height:2px;border-radius:2px;background:#ffffff1f;overflow:hidden}
-.loading-bar span{display:block;height:100%;background:linear-gradient(90deg,#9aa3b5,#ffffff);box-shadow:0 0 8px #ffffffaa;transition:width .25s ease}
-.loading-note{margin:16px 0 0;color:#8d8f99;font-size:12px;letter-spacing:.04em}
-@keyframes loading-wave{0%{transform:translate(-3%,-50%) scaleY(.9)}100%{transform:translate(3%,-50%) scaleY(1.1)}}
+.loading-note{margin:0;color:#8d8f99;font-size:12px;letter-spacing:.04em}
+@keyframes loading-ribbon{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes loading-dot{0%,80%,100%{opacity:.15}40%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.loading-wave,.loading-dots i{animation:none}}
-/* The camera and lighting controls are styled like the PSP's own glossy black buttons. */
-.light-toggle{position:absolute;z-index:4;right:26px;bottom:76px}
-.light-panel{position:fixed;inset:auto 26px 126px auto;margin:0;padding:16px 14px;width:176px;border:1px solid #ffffff26;border-radius:14px;
- background:linear-gradient(180deg,#1c1c21f5,#0b0b0df5);color:#e9e9ee;box-shadow:0 10px 30px #000000a0,inset 0 1px #ffffff1a}
-.light-slider-layout{height:154px;display:grid;grid-template-columns:28px 1fr;align-items:stretch;gap:12px}
-.light-slider-layout input{writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;margin:0;accent-color:#d6d8e0;cursor:pointer;touch-action:none}
-.light-stop-labels{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#b3b5bf;font:400 10px/1 Michroma,"Arial Black",sans-serif;letter-spacing:.1em;text-transform:uppercase}
-.light-stop-labels span{height:18px;display:flex;align-items:center}
+@media (prefers-reduced-motion:reduce){.loading-ribbon svg,.loading-dots i{animation:none}}
+.light-toggle{bottom:76px}
 .memories-stage.rotation-locked>canvas,.memories-stage.rotation-locked>canvas:active{cursor:default}
 .sound-toggle{bottom:126px}
-.sound-toggle[aria-pressed="false"]{color:#8d8f99}
+.sound-toggle[aria-pressed="false"]{opacity:.5}
 .page.rotation-locked .sound-toggle{bottom:26px}
 .page.rotation-locked .light-toggle{bottom:76px}
-.page.rotation-locked .light-panel{bottom:126px}
 /* Page wheel: Persona 5–style half wheel on the left (above the PSP on narrow screens). Sizes come from --r and --font. */
 .page-wheel{--accent:#c8222c;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none;
  transform-origin:0 50%;animation:wheel-enter .7s var(--spin) var(--delay,0ms) both}
@@ -110,6 +104,41 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .page.experience-bo2 .site-name{font:600 clamp(15px,1.4vw,19px)/1.15 "Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;
  letter-spacing:.16em;text-transform:uppercase}
 .page.phone .site-name{left:14px;top:8px;font-size:clamp(12px,1.9cqw,16px)}
+/* GitHub, LinkedIn and résumé shortcuts in the top-right corner (QuickLinks). The base is a round button; Classic
+   strips it to bare logos and each game restyles it in its own look. */
+.quick-links{position:absolute;z-index:5;right:26px;top:20px;display:flex;gap:10px}
+.quick-links a{display:grid;place-items:center;width:38px;height:38px;border:1px solid #ffffff2e;border-radius:50%;color:#e4e4ea;
+ background:radial-gradient(circle at 35% 28%,#3a3a40 0%,#141417 55%,#050506 100%);
+ box-shadow:0 3px 10px #000000b0,inset 0 1px 1px #ffffff40,inset 0 -2px 4px #00000080;transition:color .2s,box-shadow .2s,transform .2s,background .2s}
+.quick-links a:hover,.quick-links a:focus-visible{color:#fff;box-shadow:0 0 12px #ffffff40,0 3px 10px #000000b0,inset 0 1px 1px #ffffff55,inset 0 -2px 4px #00000080}
+.quick-links a:focus-visible{outline:2px solid #fff;outline-offset:3px}
+/* Classic: bare logos set like the name in the opposite corner, in its off-white with a soft shadow, and the name's
+   short underline drawing out on hover. */
+.page.experience-classic .quick-links{gap:4px}
+.page.experience-classic .quick-links a{position:relative;width:34px;border:0;border-radius:0;background:none;box-shadow:none;color:#f5f5f7;opacity:.82;
+ filter:drop-shadow(0 1px 6px #00000080);transition:opacity .25s,color .25s}
+.page.experience-classic .quick-links a::after{content:"";position:absolute;left:9px;right:9px;bottom:2px;height:2px;border-radius:2px;background:#fff;
+ transform:scaleX(0);transition:transform .3s ease}
+.page.experience-classic .quick-links a:hover,.page.experience-classic .quick-links a:focus-visible{opacity:1;color:#fff;box-shadow:none}
+.page.experience-classic .quick-links a:hover::after,.page.experience-classic .quick-links a:focus-visible::after{transform:scaleX(1)}
+/* Persona 5: black plates at jaunty angles with a white offset shadow, flipping to red on hover. */
+.page.experience-persona5 .quick-links{gap:12px}
+.page.experience-persona5 .quick-links a{border:0;border-radius:0;background:#000;color:#f4f1ea;box-shadow:3px 3px 0 #f4f1ea;transform:rotate(-6deg) skewX(-8deg)}
+.page.experience-persona5 .quick-links a:nth-child(2){transform:rotate(5deg) skewX(-8deg)}
+.page.experience-persona5 .quick-links a:hover,.page.experience-persona5 .quick-links a:focus-visible{background:#e5191c;color:#000;box-shadow:3px 3px 0 #000;transform:skewX(-8deg) scale(1.12)}
+/* GTA: bare white icons with the HUD's heavy black outline, turning cash green on hover. */
+.page.experience-gta .quick-links a{border:0;background:none;box-shadow:none;color:#fff;
+ filter:drop-shadow(1.5px 0 0 #000) drop-shadow(-1.5px 0 0 #000) drop-shadow(0 1.5px 0 #000) drop-shadow(0 -1.5px 0 #000) drop-shadow(0 2px 4px #0008)}
+.page.experience-gta .quick-links svg{width:24px;height:24px;stroke-width:2.4}
+.page.experience-gta .quick-links a:hover,.page.experience-gta .quick-links a:focus-visible{color:#72cc72;box-shadow:none;transform:scale(1.12)}
+/* Black Ops II: square tactical tiles with thin borders, lit in the menu orange on hover. */
+.page.experience-bo2 .quick-links{gap:8px}
+.page.experience-bo2 .quick-links a{border-radius:2px;border-color:#ffffff38;background:#0b0c0dcc;box-shadow:inset 0 0 0 1px #0006;color:#d7d9dc}
+.page.experience-bo2 .quick-links a:hover,.page.experience-bo2 .quick-links a:focus-visible{border-color:#f47b20;color:#f47b20;box-shadow:0 0 10px #f47b2055,inset 0 0 0 1px #0006}
+.page.phone .quick-links{right:14px;top:8px;gap:8px}
+.page.phone .quick-links a{width:30px;height:30px}
+.page.phone .quick-links svg{width:15px;height:15px}
+.page.phone.experience-gta .quick-links svg{width:19px;height:19px}
 /* Holds a game experience's wheel; reading pages (readingFocus) tuck it off the side while the PSP grows back. */
 .wheel-dock{position:absolute;inset:0;z-index:3;pointer-events:none;transition:transform .6s cubic-bezier(.6,0,.3,1),opacity .45s ease}
 .wheel-dock.tucked{transform:translateX(-100%);opacity:0}
@@ -140,7 +169,7 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .gta-backdrop{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s;background:#0b6f8f center/cover no-repeat}
 .gta-backdrop.used{background-image:linear-gradient(90deg,#000000a6,#00000040 30%,#0000 50%),url('/experiences/gta/vice-city.jpg')}
 .gta-backdrop.active{opacity:1;visibility:visible;transition:opacity .6s .5s}
-.gta-cash{position:absolute;z-index:4;right:26px;top:18px;display:grid;justify-items:end;font-size:clamp(40px,4vw,58px);pointer-events:none;
+.gta-cash{position:absolute;z-index:4;right:26px;top:64px;display:grid;justify-items:end;font-size:clamp(40px,4vw,58px);pointer-events:none;
  opacity:0;visibility:hidden;transition:opacity .5s,visibility 0s .5s;filter:drop-shadow(0 2px 6px #0008)}
 .gta-cash.active{opacity:1;visibility:visible;transition:opacity .6s .9s}
 .pricedown{display:flex;height:1em}
@@ -243,17 +272,15 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 @media (max-width: 700px) {
   .reset-view { right: 16px; bottom: 18px; width: 36px; height: 36px; }
   .light-toggle { right: 16px; bottom: 64px; width: 36px; height: 36px; }
-  .light-panel { right: 14px; bottom: 110px; }
   .sound-toggle { right: 16px; bottom: 110px; width: 36px; height: 36px; }
   .page.rotation-locked .sound-toggle { bottom: 18px; }
   .page.rotation-locked .light-toggle { bottom: 64px; }
-  .page.rotation-locked .light-panel { bottom: 110px; }
 }
 /* Matches the narrow breakpoint in src/layout.js: the PSP sits at the bottom, so the lighting control moves to the top corner. */
 @media (max-width: 759px) {
   .page.rotation-locked .light-toggle { top: 16px; bottom: auto; }
-  .page.rotation-locked .light-panel { inset: 62px 14px auto auto; }
-  .page.rotation-locked .gta-cash { right: 64px; top: 6px; }
+  .page.rotation-locked .quick-links { right: 66px; top: 17px; }
+  .page.rotation-locked .gta-cash { right: 16px; top: 60px; }
   /* The wheel sits above the PSP here, so it tucks upwards, and leaves room for the name in the corner. */
   .page:not(.phone) .wheel-dock.tucked { transform: translateY(-100%); }
   .page:not(.phone) .bo2-menu { padding-top: 40px; }
@@ -269,7 +296,7 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .page.phone .theme-prompt{bottom:max(10px,4cqh);font-size:clamp(10px,1.6cqw,15px);letter-spacing:.24em}
 .page.phone .p5-card-slash{height:max(60px,17cqh)}
 .page.phone .p5-card-title{bottom:calc(9% + max(60px,17cqh) / 2);font-size:max(30px,9cqh)}
-.page.phone .gta-cash{right:14px;top:2px;font-size:clamp(28px,5cqw,40px)}
+.page.phone .gta-cash{right:14px;top:40px;font-size:clamp(28px,5cqw,40px)}
 .page.phone .gta-bar{height:11cqh}
 .page.phone .gta-subtitle{bottom:calc(11cqh + 10px);font-size:clamp(14px,2.6cqw,26px)}
 /* The strip beside the PSP is slim: the main menu's type shrinks to fit it. */
