@@ -17,9 +17,13 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
 const bytes = new Uint8Array(await readFile(url));
 const document = await io.readBinary(bytes);
 const root = document.getRoot();
+// △ (5), □ (8), SELECT (14) and START (15) are separate in models built by the current prepare-model.py; older models
+// merged them into the body, and the page then adds stand-ins for △, □ and START.
 const names = ['body_low', 'screen_low', ...[1, 2, 3, 4, 6, 7, 9].map(i => `button${i}_low`)];
-const nodes = root.listNodes().filter(node => node.getMesh());
-assert.deepEqual(nodes.map(node => node.getName()).sort(), names.sort());
+const optional = [5, 8, 14, 15].map(i => `button${i}_low`);
+const nodes = root.listNodes().filter(node => node.getMesh()), found = nodes.map(node => node.getName());
+assert(names.every(name => found.includes(name)), `Missing meshes: ${names.filter(name => !found.includes(name))}`);
+assert(found.every(name => names.includes(name) || optional.includes(name)), `Unexpected meshes: ${found.filter(name => !names.includes(name) && !optional.includes(name))}`);
 assert(root.listMaterials().every(material => !material.getDoubleSided()));
 assert.equal(root.listTextures().length, 4);
 assert(root.listTextures().every(texture => texture.getMimeType() === 'image/ktx2'));

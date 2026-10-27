@@ -16,19 +16,23 @@ export function keyAction(key){
  return entry?{type:entry[0],button:entry[1]}:null;
 }
 
-// Mesh names in psp.glb and the button each one is: D-pad up/right/down/left, △, ○, ✕, □, Home and START (a
-// stand-in, see addFaceButtons).
-export const buttonNames={button1_low:'up',button2_low:'right',button3_low:'down',button4_low:'left',button5_low:'triangle',button6_low:'circle',button7_low:'cross',button8_low:'square',button9_low:'home',start_low:'start'};
+// Mesh names in psp.glb and the button each one is: D-pad up/right/down/left, △, ○, ✕, □, Home and START. Models
+// built before scripts/prepare-model.py kept △, □ and START separate get stand-ins instead (see addFaceButtons):
+// start_low stands in for button15_low.
+export const buttonNames={button1_low:'up',button2_low:'right',button3_low:'down',button4_low:'left',button5_low:'triangle',button6_low:'circle',button7_low:'cross',button8_low:'square',button9_low:'home',button15_low:'start',start_low:'start'};
 // START confirms like ✕, so it passes the Start screen and starts Button Rush from its cards.
 const menuActions={up:'UP',right:'RIGHT',down:'DOWN',left:'LEFT',cross:'CONFIRM',circle:'BACK',home:'BACK',start:'CONFIRM'};
 // The buttons the menu uses, by mesh name. △ and □ only work in the game.
 export const buttonActions=Object.fromEntries(Object.entries(buttonNames).filter(([,button])=>menuActions[button]).map(([name,button])=>[name,menuActions[button]]));
 const meshFor=Object.fromEntries(Object.entries(buttonNames).map(([name,button])=>[button,name]));
 
-// The optimized model merges △ (button5_low), □ (button8_low) and START into the body, so they get invisible
-// stand-ins. △ and □ are cut from ○: the face buttons sit in a diamond, so △ is as far above its centre (✕'s x, ○'s y)
-// as ○ is right of it, and □ as far left. START is the same half pill as Home, mirrored across the PSP's centre line
-// (x = 0) at Home's height. They take clicks and a halo; the merged buttons themselves don't move when pressed.
+// Older optimized models merge △ (button5_low), □ (button8_low) and START (button15_low) into the body, so they get
+// invisible stand-ins when they're missing. △ and □ are cut from ○: the face buttons sit in a diamond, so △ is as far above its centre (✕'s x, ○'s y)
+// as ○ is right of it, and □ as far left. START is Home's half pill mirrored across the PSP's centre line, centred
+// where the source model has button15_low (x 0.77–0.93, at Home's height).
+// They take clicks and a halo; the merged buttons themselves don't move when pressed.
+// The centre of START (button15_low) in the source model, in the model's own units.
+const START_X=.85;
 export function addFaceButtons(model){
  const centre=mesh=>{mesh.geometry.computeBoundingBox();mesh.updateMatrix();return mesh.geometry.boundingBox.getCenter(new THREE.Vector3()).applyMatrix4(mesh.matrix);};
  const standIn=(source,name,offset)=>{
@@ -44,7 +48,16 @@ export function addFaceButtons(model){
   standIn(circle,'button5_low',new THREE.Vector3(-step,step,0));
   standIn(circle,'button8_low',new THREE.Vector3(-2*step,0,0));
  }
- if(home)standIn(home,'start_low',new THREE.Vector3(-2*centre(home).x,0,0));
+ // START is Home's mirror image, not a copy: reflect Home's whole transform across x = 0 so the pill's lopsided curve
+ // flips too (a reflection's negative scale is fine for clicks and for the glow, which traces through the matrix).
+ if(home&&!model.getObjectByName('button15_low')&&!model.getObjectByName('start_low')){
+  home.updateMatrix();
+  const stand=new THREE.Mesh(home.geometry,new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
+  stand.name='start_low';
+  new THREE.Matrix4().makeScale(-1,1,1).multiply(home.matrix).decompose(stand.position,stand.quaternion,stand.scale);
+  stand.position.x+=START_X-centre(stand).x;
+  home.parent.add(stand);
+ }
 }
 
 // Taps and swipes on the PSP screen drive the XMB, and clicks on the PSP's buttons press them. The mouse wheel is

@@ -14,7 +14,9 @@ source, output = sys.argv[sys.argv.index("--") + 1:]
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
 bpy.ops.import_scene.gltf(filepath=str(Path(source).resolve()))
-interactive = {"screen_low", *(f"button{i}_low" for i in (1, 2, 3, 4, 6, 7, 9))}
+# △ (5), □ (8), SELECT (14) and START (15) stay separate too: joined into the body they were decimated with it,
+# which warped their printed labels, and the page needs △, □ and START as their own click targets.
+interactive = {"screen_low", *(f"button{i}_low" for i in (1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15))}
 meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
 assert interactive <= {o.name for o in meshes}
 before = sum(len(o.data.polygons) for o in meshes)
@@ -47,9 +49,12 @@ for obj in meshes:
         material.use_backface_culling = True
         obj.data.materials.clear()
         obj.data.materials.append(material)
-    else:
+    elif not obj.name.startswith("button"):
+        # Buttons are left whole: a few hundred triangles each, and decimating them bends their printed labels. The
+        # body gives up a little more instead (0.6 rather than 0.66), keeping the model inside check-model's
+        # 40k triangle budget.
         modifier = obj.modifiers.new("Preserve silhouette", "DECIMATE")
-        modifier.ratio = 0.66 if obj.name not in interactive else 0.9
+        modifier.ratio = 0.6
         modifier.use_collapse_triangulate = True
         bpy.ops.object.modifier_apply(modifier=modifier.name)
 for material in bpy.data.materials:

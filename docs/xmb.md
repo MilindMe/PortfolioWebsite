@@ -230,7 +230,7 @@ Pressing a mapped key also animates the matching PSP button.
   | `button9_low` | Home | BACK |
   | `start_low` | START | CONFIRM |
 
-  The model merges △, □ and START into the body, so `addFaceButtons` adds invisible stand-ins: △ (`button5_low`) and □ (`button8_low`) are cut from ○ and placed in the face-button diamond, and `start_low` is Home's half pill mirrored across the PSP's centre line. △ and □ are unmapped outside Button Rush; START passes the Start screen and starts or retries Button Rush, and is ignored mid-round. A press nudges the mesh along local z for 120 ms. The map is exported as `buttonActions`.
+  The shipped model still merges △, □ and START into the body, so `addFaceButtons` adds invisible stand-ins: △ (`button5_low`) and □ (`button8_low`) are cut from ○ and placed in the face-button diamond, and `start_low` is Home's half pill mirrored across the PSP's centre line, centred on START's position in the source model. `scripts/prepare-model.py` now keeps △, □, SELECT (`button14_low`) and START (`button15_low`) as separate, undecimated meshes. Once the model is rebuilt (`npm run model:optimize`) the real meshes are used and the stand-ins are skipped. △ and □ are unmapped outside Button Rush; START passes the Start screen and starts or retries Button Rush, and is ignored mid-round. A press nudges the mesh along local z for 120 ms. The map is exported as `buttonActions`.
 - **Button glow** (`buttonGlow.js`):
   - Every button in `buttonActions` gets a halo: a quad sitting just above the button.
   - All the halos share one ring texture, transparent in the middle so the button stays visible, drawn with additive blending, `depthWrite: false` and no raycasting.
@@ -294,9 +294,23 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 
 ## The model pipeline
 
+> **Pending rebuild.** `scripts/prepare-model.py` has changed since `public/models/psp-v3.glb` was built: △, □, SELECT
+> and START are now kept as separate, undecimated meshes, no button is decimated (that was warping the printed SELECT
+> and START labels), and the body is decimated to 0.6 instead of 0.66 to stay under the 40k triangle budget (about
+> 39,600 expected). The shipped model predates this, so the page still uses stand-ins for △, □ and START. To apply it:
+>
+> 1. Install Blender and KTX-Software 4.4+ (`brew install --cask blender` and the KTX release from
+>    https://github.com/KhronosGroup/KTX-Software/releases, so `ktx` is on PATH).
+> 2. `npm run model:optimize`: rebuilds `public/models/psp-v3.glb` and runs the model check before replacing it.
+> 3. `npm run model:check`: confirm the triangle count (≤ 40,000) and file size (< 651,172 bytes). If the size check
+>    fails, lower the body ratio a little in `prepare-model.py` and rebuild.
+> 4. `npm run dev`: check the SELECT and START labels are straight, and that △, □ and START glow and click as before.
+>    The page picks up the real meshes by name (`button5_low`, `button8_low`, `button15_low`) and skips the stand-ins.
+> 5. Update the triangle and byte counts under **Blender** and **Output** below, delete this note, and commit the model.
+
 - **Source**: `assets-src/psp.glb`, preserved unchanged and excluded from the public build.
 - **Build**: `npm run model:optimize` requires Blender and KTX-Software 4.4+ (`ktx` on PATH). `BLENDER_BIN` can override the Blender executable; the usual macOS application path is detected automatically.
-- **Blender**: `scripts/prepare-model.py` writes a temporary cleaned export. It welds coincident vertices, removes degenerate and non-manifold internal faces conservatively, recalculates outward normals, decimates to 39,980 triangles, and joins static parts into `body_low`. All material faces are single-sided. It retains `screen_low` and the seven button meshes separately, with their exact names.
+- **Blender**: `scripts/prepare-model.py` writes a temporary cleaned export. It welds coincident vertices, removes degenerate and non-manifold internal faces conservatively, recalculates outward normals, decimates the static parts (0.6 since the pending rebuild; the shipped model used 0.66 and has 39,980 triangles) and joins them into `body_low`. Buttons are never decimated. All material faces are single-sided. It retains `screen_low` and the button meshes separately, with their exact names: buttons 1–9, SELECT (14) and START (15).
 - **Screen UVs**: planar projection is baked into the export, with U right and V up in the final glTF. The separate screen material carries no atlas texture.
 - **Textures**: albedo stays 1536²; emissive shrinks to 512², normal to 768², and metal/roughness to 256². ETC1S compresses albedo/emissive, UASTC with RDO compresses normal/metal/roughness, and all atlas textures have mipmaps. The XMB CanvasTexture continues to use linear filtering without mipmaps.
 - **Geometry**: meshopt compression uses one scene quantization grid. Nodes have transforms: halo placement goes through the button matrix and presses move from the rest position.
