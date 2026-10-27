@@ -1,7 +1,9 @@
-// Button Rush, the mini game under Games. Each round shows a sequence of PSP buttons to press in order before its
-// timer runs out; a wrong button sends the player back to the start of the sequence. Four rounds, from four buttons
-// to seven. Lives in the XMB state as state.game while state.view is 'game'.
+// Button Rush, Mini Game
+// 
+// M.Meetarbhan
+
 export const ROUNDS=[{length:4,time:5000},{length:5,time:5000},{length:6,time:5000},{length:7,time:5000}];
+
 // How long the "Round n" card shows before that round's timer starts, in ms.
 export const READY_FOR=1200;
 export const BUTTONS=['up','right','down','left','triangle','circle','cross','square'];
@@ -12,9 +14,11 @@ export const BUTTON_LABELS={up:'Up',right:'Right',down:'Down',left:'Left',triang
 // status: 'title' before the first round, 'ready' while a round's card shows (until startsAt), 'play' while its timer
 // runs (until endsAt), then 'lost', or 'won' after the last round. pos is how far into seq the player is, and missAt
 // is when the last wrong button was pressed, so the screen can flash.
+
 export const newGame=()=>({status:'title',round:0,seq:[],pos:0,startsAt:0,endsAt:0,missAt:0});
 
-// A random sequence long enough for the last round, never the same button twice in a row.
+// Random Sequence Generator.
+// TODO : ALLOW TWO BUTTONS IN A ROW? 
 function roll(){
  const seq=[];
  while(seq.length<ROUNDS.at(-1).length){
@@ -36,15 +40,20 @@ const ready=(round,{now,roll})=>({status:'ready',round,seq:roll.slice(0,ROUNDS[r
 export function gameReducer(game,action){
  const {button}=action;
  if(button==='home'||(action.type==='BACK'&&!button))return null;
+
  if(action.type==='TICK'){
-  if(game.status==='ready')return {...game,status:'play',endsAt:action.now+ROUNDS[game.round].time};
-  if(game.status==='play')return {...game,status:'lost'};
-  return game;
+    
+    if(game.status==='ready')return {...game,status:'play',endsAt:action.now+ROUNDS[game.round].time};
+    if(game.status==='play')return {...game,status:'lost'};
+
+ return game;
  }
+
  if(game.status==='title'||game.status==='lost'||game.status==='won'){
   if(button==='circle')return null;
   return action.type==='CONFIRM'||button==='cross'?ready(0,action):game;
  }
+ 
  if(game.status!=='play'||!button)return game;
  if(action.now>=game.endsAt)return {...game,status:'lost'};
  if(button!==game.seq[game.pos])return {...game,pos:0,missAt:action.now};
