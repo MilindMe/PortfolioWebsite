@@ -19,3 +19,16 @@ test('a trophy is earned once, announced once and remembered',()=>{
 test('unknown trophies are ignored',()=>{
  assert.equal(awardTrophy('no-such-trophy'),false);
 });
+
+test('earning the last trophy G.O.A.T needs awards it straight after',()=>{
+ const heard=[], stop=onTrophy(trophy=>heard.push(trophy)), needs=trophies.goat.requires;
+ assert.equal(needs.length,7);
+ needs.slice(0,-1).forEach(awardTrophy);
+ assert(!earnedTrophies().has('goat'));
+ awardTrophy(needs.at(-1));
+ assert(earnedTrophies().has('goat'));
+ assert.deepEqual(heard.slice(-2).map(trophy=>trophy.id),[needs.at(-1),'goat']);
+ assert.equal(heard.at(-1).grade,'platinum');
+ assert(!('requires' in heard.at(-1)),'the card is sent without the requires list');
+ stop();
+});

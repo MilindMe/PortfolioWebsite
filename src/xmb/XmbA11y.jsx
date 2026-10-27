@@ -20,7 +20,9 @@ const linkProps=url=>url===RESUME_URL?{download:RESUME_FILE}:{target:'_blank',re
 function pageText(detail){
  if(!detail.blocks)return detail.body;
  return detail.blocks.map(block=>block.type==='list'?block.items.join('. '):block.type==='timeline'
-  ?block.entries.map(entry=>[entry.role,entry.org,entry.when,...(entry.points??[])].filter(Boolean).join(', ')).join('. '):block.text).join('. ');
+  ?block.entries.map(entry=>[entry.role,entry.org,entry.when,...(entry.points??[])].filter(Boolean).join(', ')).join('. ')
+  :block.type==='grid'?block.items.map(item=>[item.title,item.text].filter(Boolean).join(', ')).join('. ')
+  :block.type==='image'?block.caption??'':block.text).filter(Boolean).join('. ');
 }
 
 function DetailBody({detail}){
@@ -31,6 +33,11 @@ function DetailBody({detail}){
    <strong>{entry.role}</strong>{entry.org?`, ${entry.org}`:''} <time>{entry.when}</time>
    {entry.points&&<ul>{entry.points.map(point=><li key={point}>{point}</li>)}</ul>}
   </li>)}</ol>
+  // Images are described, not embedded, so the hidden copy never downloads them for visitors who don't open the page.
+  :block.type==='image'?<figure key={i}>{block.alt&&<span role="img" aria-label={block.alt}/>}{block.caption&&<figcaption>{block.caption}</figcaption>}</figure>
+  :block.type==='grid'?<ul key={i}>{block.items.map(item=><li key={item.title}>
+   {item.alt&&<span role="img" aria-label={item.alt}/>}<strong>{item.title}</strong>{item.text?` — ${item.text}`:''}
+  </li>)}</ul>
   :<p key={i}>{block.text}</p>);
 }
 

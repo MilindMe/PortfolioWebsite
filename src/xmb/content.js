@@ -14,7 +14,10 @@ const resume={label:'Résumé', url:RESUME_URL, icon:'resume'};
 // Settings is generated from themes.js: the colour-only themes sit in the Classics folder, and each game
 // experience gets its own item. Theme items carry theme and apply it on confirm.
 // A detail can use blocks instead of body for a laid-out page: {type:'h', text} headings, {type:'p', text}
-// paragraphs, {type:'list', items:[...]} bullets and {type:'timeline', entries:[{when, role, org, points, current}]}.
+// paragraphs, {type:'list', items:[...]} bullets, {type:'timeline', entries:[{when, role, org, points, current}]},
+// {type:'image', src, alt, align, width, height, caption} pictures (align 'left' or 'right' floats it beside the blocks
+// that follow; no align is a full-width banner) and {type:'grid', columns, items:[{image, title, text}]} cards.
+// See docs/content.md for examples.
 // focus marks a page worth reading in full: game experiences tuck their wheel away and the PSP grows back while it's open.
 export const categories = [
  {
@@ -76,7 +79,12 @@ export const categories = [
     detail:{title:'Skills', body:'Languages: Go, C, C#, TypeScript, Kotlin, Python\nFrameworks & Libraries: React, React Native, Angular, PyTorch, Langchain, LangGraph\nTools: Git, CI/CD, Figma'}},
 
    {id:'education', label:'Education', sub:'Studies', icon:'education',
-    detail:{title:'Education', body:'Combinatorics & Optimization + Statistics \n Minor in Computing \n University of Waterloo.'}},
+    detail:{title:'Education', blocks:[
+     {type:'image', src:'/education/uw-seal.webp', alt:'University of Waterloo seal', align:'right', width:76},
+     {type:'h', text:'University of Waterloo'},
+     {type:'p', text:'Combinatorics & Optimization + Statistics'},
+     {type:'p', text:'Minor in Computing'},
+    ]}},
   ],
  },
  {

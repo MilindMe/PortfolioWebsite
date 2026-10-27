@@ -19,6 +19,8 @@ const TEXT='#dadada', BRIGHT='#ffffff', P5_RED='#e5191c';
 const BODY_TOP=62, BODY_BOTTOM=222, LINE_H=13, SCROLL_STEP=LINE_H*2;
 // An open folder slides its column this far left and lists its entries this far right of the folder icon.
 const FOLDER_SHIFT=70, FOLDER_GAP=72;
+// Detail pages: the gap between a floated image and the text beside it, and between grid cards.
+const FLOAT_GAP=12, GRID_GAP=8;
 // GTA skin: a Vice City skyline along the horizon, as [x, width, height] blocks.
 const SKYLINE=[[0,34,22],[30,20,40],[48,40,28],[86,16,56],[100,46,34],[150,26,18],[174,38,46],[210,22,30],[236,50,62],[284,30,24],
  [312,24,44],[334,44,30],[376,18,52],[392,40,26],[430,26,38],[454,30,20]], HORIZON=196;
@@ -55,20 +57,75 @@ function wrap(ctx,text,width){
  return lines;
 }
 
-// Lays a detail page out once as positioned ops (text runs, bullet dots and timeline rails), y from the top of the body.
-// A plain body is a single paragraph; its line breaks are kept. accent colours headings and the current timeline dot.
-function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
- const ops=[];let y=0;
+// Lays a detail page out once as positioned ops (text runs, bullet dots, timeline rails, images and cards), y from the
+// top of the body. A plain body is a single paragraph; its line breaks are kept. accent colours headings and the
+// current timeline dot. An image floated left or right sits beside the blocks after it, which wrap line by line in
+// the room left until they pass its bottom; images load later, so every box has a fixed size here.
+export function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
+ const ops=[];let y=0, float=null;
+ const beside=()=>float&&y<float.bottom?float:null;
+ // How far a line starting now is pushed right by a left float, and how much narrower any float makes it.
+ const indent=()=>beside()?.side==='left'?beside().w+FLOAT_GAP:0;
+ const room=x=>width-x-(beside()?beside().w+FLOAT_GAP:0);
  const text=(value,x,font,color,lineH=LINE_H)=>{
   ctx.font=font;
-  for(const line of wrap(ctx,value,width-x)){ops.push({text:line,x,y,font,color});y+=lineH;}
+  for(const paragraph of value.split('\n')){
+   let line='';
+   const flush=()=>{ops.push({text:line,x:x+indent(),y,font,color});y+=lineH;line='';};
+   for(const word of paragraph.split(' ')){
+    const next=line?`${line} ${word}`:word;
+    if(line&&ctx.measureText(next).width>room(x)){flush();line=word;}else line=next;
+   }
+   flush();
+  }
  };
- const bullet=(value,x)=>{ops.push({dot:true,x:x+2,y:y+5.5,r:1.3,color:TEXT});text(value,x+9,`10px ${FONT}`,TEXT);};
+ const bullet=(value,x)=>{ops.push({dot:true,x:x+2+indent(),y:y+5.5,r:1.3,color:TEXT});text(value,x+9,`10px ${FONT}`,TEXT);};
+ const clear=()=>{if(float){y=Math.max(y,float.bottom);float=null;}};
+ let floated=false;
  (blocks??[{type:'p',text:body??''}]).forEach((block,i)=>{
-  if(i)y+=block.type==='h'?12:6;
-  if(block.type==='h'){text(block.text.toUpperCase(),0,headFont,accent,headH);ops.push({rule:true,x:0,y:y,w:24,color:accent});y+=6;}
+  // A floated image starts level with whatever follows it, so neither takes the usual gap between blocks.
+  if(i&&!floated&&!(block.type==='image'&&block.align))y+=block.type==='h'?12:6;
+  floated=false;
+  if(block.type==='h'){text(block.text.toUpperCase(),0,headFont,accent,headH);ops.push({rule:true,x:indent(),y:y,w:24,color:accent});y+=6;}
   else if(block.type==='p')text(block.text,0,`10px ${FONT}`,TEXT);
   else if(block.type==='list')block.items.forEach(item=>bullet(item,2));
+  else if(block.type==='image'){
+   if(block.align==='left'||block.align==='right'){
+    clear();
+    const w=Math.min(block.width??72,width/2), h=block.height??w;
+    ops.push({image:true,src:block.src,x:block.align==='right'?width-w:0,y,w,h,fit:block.fit??'contain',align:block.align});
+    float={side:block.align,w,bottom:y+h};floated=true;
+   }else{
+    clear();
+    const h=block.height??Math.round(width*.4);
+    ops.push({image:true,src:block.src,x:0,y,w:width,h,fit:block.fit??'cover',round:6});y+=h;
+    if(block.caption){y+=4;text(block.caption,0,`8.5px ${FONT}`,'rgba(255,255,255,.6)',11);}
+   }
+  }
+  else if(block.type==='grid'){
+   clear();
+   const columns=block.columns??2, w=(width-GRID_GAP*(columns-1))/columns, imageH=block.imageHeight??Math.round(w*.45);
+   for(let row=0;row<block.items.length;row+=columns){
+    if(row)y+=GRID_GAP;
+    let tallest=0;
+    const cards=block.items.slice(row,row+columns).map((item,c)=>{
+     const x=c*(w+GRID_GAP), card={card:true,x,y,w,h:0};ops.push(card);
+     let at=y;
+     if(item.image){ops.push({image:true,src:item.image,x,y,w,h:imageH,fit:item.fit??'cover',round:6,top:true});at+=imageH;}
+     at+=6;
+     for(const [value,font,color,lineH] of [[item.title,`bold 10px ${FONT}`,BRIGHT,12],[item.text,`8.5px ${FONT}`,TEXT,11]]){
+      if(!value)continue;
+      ctx.font=font;
+      for(const line of wrap(ctx,value,w-12)){ops.push({text:line,x:x+6,y:at,font,color});at+=lineH;}
+      at+=2;
+     }
+     tallest=Math.max(tallest,at+4-y);
+     return card;
+    });
+    cards.forEach(card=>{card.h=tallest;});
+    y+=tallest;
+   }
+  }
   else if(block.type==='timeline'){
    let previous=null;
    block.entries.forEach((entry,j)=>{
@@ -85,7 +142,7 @@ function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
    });
   }
  });
- return {ops,height:y};
+ return {ops,height:Math.max(y,float?.bottom??0)};
 }
 
 export class XmbRenderer{
@@ -495,7 +552,13 @@ export class XmbRenderer{
   for(const op of ops){
    if(op.rail){ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(x+op.x-.4,y+op.y1,.8,op.y2-op.y1);continue;}
    const at=y+op.y;
-   if(at<top-16||at>bottom+4)continue;
+   if(at+(op.h??0)<top-16||at>bottom+4)continue;
+   if(op.card){
+    ctx.save();ctx.shadowColor='transparent';ctx.beginPath();ctx.roundRect(x+op.x,at,op.w,op.h,6);
+    ctx.fillStyle='rgba(255,255,255,.07)';ctx.fill();ctx.lineWidth=.6;ctx.strokeStyle='rgba(255,255,255,.18)';ctx.stroke();ctx.restore();
+    continue;
+   }
+   if(op.image){this.pageImage(op,x+op.x,at);continue;}
    if(op.rule){ctx.fillStyle=op.color;ctx.globalAlpha*=.7;ctx.fillRect(x+op.x,at,op.w,1);ctx.globalAlpha/=.7;}
    else if(op.dot){
     ctx.beginPath();ctx.arc(x+op.x,at,op.r,0,Math.PI*2);
@@ -503,6 +566,23 @@ export class XmbRenderer{
    }
    else{ctx.font=op.font;ctx.fillStyle=op.color;ctx.fillText(op.text,x+op.x,at);}
   }
+ }
+ // An image box on a detail page: contain fits the whole picture (a logo, pushed to its float's side), cover fills the
+ // box and crops. A soft placeholder shows until it loads (photo() redraws once it does) or if it's missing.
+ pageImage(op,x,y){
+  const ctx=this.ctx, entry=this.photo(op.src);
+  ctx.save();ctx.shadowColor='transparent';
+  ctx.beginPath();
+  if(op.top)ctx.roundRect(x,y,op.w,op.h,[op.round,op.round,0,0]);else ctx.roundRect(x,y,op.w,op.h,op.round??0);
+  if(!entry.ok){
+   if(op.fit==='cover'||entry.failed){ctx.fillStyle='rgba(255,255,255,.06)';ctx.fill();}
+   ctx.restore();return;
+  }
+  ctx.clip();
+  const {naturalWidth:w,naturalHeight:h}=entry.image, scale=(op.fit==='cover'?Math.max:Math.min)(op.w/w,op.h/h), dw=w*scale, dh=h*scale;
+  const dx=op.align==='right'?op.w-dw:op.align==='left'?0:(op.w-dw)/2;
+  ctx.drawImage(entry.image,x+dx,y+(op.h-dh)/2,dw,dh);
+  ctx.restore();
  }
  hint(label,interactive){
   const ctx=this.ctx;

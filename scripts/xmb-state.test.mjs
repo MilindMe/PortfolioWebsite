@@ -7,7 +7,7 @@ const entry=`export * from ${JSON.stringify(new URL('../src/xmb/state.js',import
 const bundle=await build({configFile:false,logLevel:'silent',plugins:[{name:'entry',resolveId:id=>id==='entry'?'\0entry':null,load:id=>id==='\0entry'?entry:null}],
  build:{write:false,minify:false,rollupOptions:{input:'entry',preserveEntrySignatures:'strict',output:{format:'es'}}}});
 const output=(Array.isArray(bundle)?bundle:[bundle]).flatMap(result=>result.output);
-const {xmbReducer,initialXmb,itemSub,readingFocus,xmbSound,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
+const {xmbReducer,initialXmb,itemSub,readingFocus,trophiesFor,xmbSound,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
 
 const last=categories.length-1;
 const menu=(cat,item)=>({cat,item:categories.map((category,i)=>i===cat?item:0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',started:true,unlocked:true});
@@ -129,4 +129,23 @@ test('Button Rush opens from Games, keeps the menu where it was and closes with 
  assert.equal(xmbReducer(open,{type:'LEFT',button:'left'}),open);
  const closed=xmbReducer(open,{type:'BACK',button:'home'});
  assert.deepEqual([closed.view,closed.game,...focus(closed)],['menu',null,games,rush]);
+});
+
+test('trophies: opening About pages and projects, playing Button Rush and switching theme',()=>{
+ const about=categories[START].items, open=(cat,id)=>{const item=categories[cat].items.findIndex(entry=>entry.id===id);return xmbReducer(menu(cat,item),{type:'CONFIRM'});};
+ for(const [id,trophy] of [['bio','about-me'],['experience','experience'],['skills','skills'],['education','education']])
+  assert.deepEqual(trophiesFor(menu(START,0),open(START,id)),[trophy],id);
+ const projects=categories.findIndex(category=>category.id==='projects');
+ assert.deepEqual(trophiesFor(menu(projects,0),xmbReducer(menu(projects,0),{type:'CONFIRM'})),['projects']);
+ const detail=open(START,'bio');
+ assert.deepEqual(trophiesFor(detail,xmbReducer(detail,{type:'DOWN',maxScroll:5})),[],'scrolling an open page earns nothing');
+ const title={...menu(1,0),view:'game',game:{status:'title',round:0}}, ready={...title,game:{status:'ready',round:0}};
+ assert.deepEqual(trophiesFor(title,ready),['first-game']);
+ assert.deepEqual(trophiesFor({...title,game:{status:'play',round:0}},{...title,game:{status:'ready',round:1}}),[],'the next round is not a new game');
+ assert.deepEqual(trophiesFor({...title,game:{status:'play',round:3}},{...title,game:{status:'won',round:3}}),['button-rush']);
+ const first={...begun(),item:categories.map((c,i)=>i===SETTINGS?persona5:0)};
+ const picked=xmbReducer(first,{type:'CONFIRM'});
+ assert.deepEqual(trophiesFor(first,picked),[],'the first theme is not a switch');
+ assert.deepEqual(trophiesFor(picked,{...picked,theme:'gta'}),['new-theme']);
+ assert.equal(about.length>0,true);
 });

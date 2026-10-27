@@ -136,6 +136,24 @@ export function itemSub(state,item){
  return active?`✓ ${active.label} in use`:item.sub;
 }
 
+// The trophies an action earns (see src/trophies.js; each is only ever awarded once). Opening About me, Experience,
+// Skills, Education or any project, starting a round of Button Rush, clearing all its rounds, and picking a theme
+// after the first one.
+const PAGE_TROPHIES={bio:'about-me',experience:'experience',skills:'skills',education:'education'};
+export function trophiesFor(previous,next){
+ const earned=[];
+ const opened=next.view==='detail'&&(previous.view!=='detail'||previous.cat!==next.cat||previous.item[previous.cat]!==next.item[next.cat]);
+ if(opened){
+  const item=currentItem(next);
+  if(PAGE_TROPHIES[item.id])earned.push(PAGE_TROPHIES[item.id]);
+  if(categories[next.cat].id==='projects')earned.push('projects');
+ }
+ if(next.game?.status==='ready'&&previous.game?.status!=='ready'&&previous.game?.status!=='play')earned.push('first-game');
+ if(next.game?.status==='won'&&previous.game?.status!=='won')earned.push('button-rush');
+ if(previous.unlocked&&next.theme!==previous.theme)earned.push('new-theme');
+ return earned;
+}
+
 // The URL an action should open, if any. Called before dispatching so window.open runs inside the user's gesture.
 export function xmbLink(state,action){
  if(action.type!=='CONFIRM'||!state.started)return null;

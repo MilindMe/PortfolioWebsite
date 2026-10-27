@@ -1,5 +1,8 @@
+import {FEATURES} from '../features';
+
 // XMB themes, picked from Settings on the PSP. colors are the backdrop gradient [top, bottom].
 // 'monthly' follows the calendar like the original PSP. experience names the page experience the theme belongs to.
+// feature names a flag in src/features.js; while it's off the theme is left out of Settings altogether.
 export const themes=[
  {id:'crimson',label:'Crimson',colors:['#c8222c','#3b070b'],experience:'classic'},
  {id:'monthly',label:'Monthly',sub:'Changes with the month, like the PSP',colors:null,experience:'classic'},
@@ -10,8 +13,8 @@ export const themes=[
  {id:'midnight',label:'Midnight',colors:['#3d4049','#0a0b0e'],experience:'classic'},
  {id:'persona5',label:'Persona 5',sub:'Take your heart',colors:['#e5191c','#140000'],experience:'persona5'},
  {id:'gta',label:'Grand Theft Auto',sub:'Follow the damn train',colors:['#ec6fae','#0b6f8f'],experience:'gta'},
- {id:'bo2',label:'Black Ops II',sub:'Main menu',colors:['#3a3f44','#0c0d0e'],experience:'bo2'},
-];
+ {id:'bo2',label:'Black Ops II',sub:'Main menu',colors:['#3a3f44','#0c0d0e'],experience:'bo2',feature:'bo2Theme'},
+].filter(theme=>!theme.feature||FEATURES[theme.feature]);
 export const DEFAULT_THEME='crimson';
 
 // Each experience is a whole page treatment. wheel names the page wheel it shows (if any), fill is the fraction of

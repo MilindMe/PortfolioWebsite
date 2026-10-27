@@ -34,12 +34,40 @@ If you paste an older copy of the file over it, compare it with `git diff` first
 ### About me, Experience, Skills, Education
 `content.js` → the `about` category.
 
-- **About me** (`bio`) and **Experience** use `blocks`:
-  - `{type:'h', text}` is a heading
-  - `{type:'p', text}` is a paragraph
-  - `{type:'list', items:[...]}` is a bullet list
-  - `{type:'timeline', entries:[{when, role, org, points:[...], current}]}` is the Experience timeline; `current:true` lights the dot
-- **Skills** and **Education** use a plain `body`. `\n` starts a new line.
+- **About me** (`bio`), **Experience** and **Education** use `blocks` (see [Page blocks](#page-blocks)).
+- **Skills** uses a plain `body`. `\n` starts a new line.
+
+### Page blocks
+Any `detail` can use `blocks:[...]` instead of `body`. They stack top to bottom, and the page scrolls if they run long.
+
+| Block | What it draws |
+| --- | --- |
+| `{type:'h', text}` | A heading in capitals, with a short underline |
+| `{type:'p', text}` | A paragraph |
+| `{type:'list', items:['...', '...']}` | Bullet points |
+| `{type:'timeline', entries:[{when, role, org, points:[...], current}]}` | The Experience timeline; `current:true` lights the dot |
+| `{type:'image', src, alt, align:'right', width}` | A picture floated to the `right` (or `left`). The blocks after it wrap beside it until they pass its bottom. `width` is in screen units (the page is about 412 wide); `height` defaults to the same, for a square. It's fitted whole, never cropped, so logos work well. |
+| `{type:'image', src, alt, height, caption}` | No `align`: a full-width banner, cropped to fill `height` (default 165), with an optional caption under it |
+| `{type:'grid', columns:2, items:[{image, alt, title, text}]}` | Cards in columns, each with an optional picture on top (cropped to fill), a bold title and a short line. Cards in a row share a height. `imageHeight` overrides the picture height. |
+
+Education is the worked example: the university seal floated right, beside a heading and two lines.
+
+```js
+detail:{title:'Education', blocks:[
+ {type:'image', src:'/education/uw-seal.webp', alt:'University of Waterloo seal', align:'right', width:76},
+ {type:'h', text:'University of Waterloo'},
+ {type:'p', text:'Combinatorics & Optimization + Statistics'},
+ {type:'p', text:'Minor in Computing'},
+]}
+```
+
+A newsletter-style page is the same pieces in order: a banner `image`, an `h`, a `p`, then a `grid`.
+
+**Pictures for pages:**
+- Put them under `public/` (for example `public/education/`) and reference them from `/`, like `'/education/uw-seal.webp'`.
+- Use WebP, small: about 256 px for a logo and 400–500 px wide for a banner or card. The whole PSP screen is only 960 px across.
+- Always give an `alt`. Screen readers hear it, and the picture itself only downloads when its page is first opened.
+- A missing file shows a faint placeholder box, not an error.
 
 ### Contact, email, GitHub, LinkedIn
 `content.js` → the `contact` category. Each item's `link` is opened directly.
@@ -75,7 +103,27 @@ For Button Rush's own settings, see [Game tuning](#game-tuning) below.
 | GTA cutscene subtitle | `src/experiences/gta/GtaCutscene.jsx` |
 | Persona 5 calling card ("Take your heart") | `src/experiences/persona5/CallingCard.jsx` |
 | Black Ops II menu mode names (Campaign, Zombies, ...) | `modes` in `src/experiences/bo2/MainMenu.jsx`, keyed by category id |
-| Trophies (title, description, grade) | `src/trophies.js` |
+| Trophies (title, description, grade) | `src/trophies.js`; see [Trophies](#trophies) |
+
+## Trophies
+Each trophy is earned once per visitor (kept in the browser) and pops up as a PS3-style card in the top-right corner.
+
+| Trophy | Grade | Earned by |
+| --- | --- | --- |
+| Getting to know me! | Gold | Opening About me (from the menu or by clicking your name) |
+| Potential employer? | Silver | Opening Experience |
+| Hard-worker | Bronze | Opening Skills |
+| um.. actually | Bronze | Opening Education |
+| clicky clicky | Bronze | Starting Button Rush for the first time |
+| Earnest Interest | Silver | Opening any project |
+| Switchin' it up | Bronze | Picking a second theme after the first |
+| Fastest fingers on the PSP | Gold | Clearing all four rounds of Button Rush (not needed for the platinum) |
+| G.O.A.T | Platinum | Earning the seven above it (the `requires` list) |
+
+- **Wording or grade:** change `title`, `description` or `grade` in `src/trophies.js`. The grade is one of `bronze`, `silver`, `gold` or `platinum`.
+- **What earns them:** `trophiesFor()` in `src/xmb/state.js`. The page trophies are matched by item id in `PAGE_TROPHIES`, so renaming an item's `id` in `content.js` breaks its trophy.
+- **Adding one:** add it to `trophies`, add a rule in `trophiesFor()`, and add its id to G.O.A.T's `requires` if it should count towards the platinum.
+- **Testing:** in `npm run dev`, run `awardTrophy('about-me')` in the browser console to try a card. Run `localStorage.removeItem('trophies-earned')` to start over.
 
 ## Themes
 `src/xmb/themes.js`.
@@ -83,6 +131,7 @@ For Button Rush's own settings, see [Game tuning](#game-tuning) below.
 - **Colour themes:** add an entry with `experience:'classic'` and its two backdrop colours, `colors:['#top','#bottom']`. It appears in the Classics folder automatically.
 - **Labels:** `label` and `sub` are what Settings shows.
 - **Default:** every visit starts on `DEFAULT_THEME` (Crimson). Themes are deliberately not remembered between visits.
+- **Black Ops II is switched off** by a feature flag: `bo2Theme` in `src/features.js`. Set it to `true` to bring the theme back to Settings. Any theme can be put behind a flag by giving it `feature:'<flag name>'` in `themes.js`.
 
 ## Game tuning
 `src/xmb/game.js`.
@@ -102,6 +151,7 @@ The GTA cash bar's digits are an image. To redraw it, see `scripts/render-cash-s
 | GTA name image | `public/experiences/gta/name.png` |
 | GTA cash digits | `public/experiences/gta/cash.png` + `src/experiences/gta/cashGlyphs.js`, both generated by `scripts/render-cash-sprite.py` |
 | Menu sounds | `public/sounds/` (see `src/sound.js`) |
+| Pictures on pages (Education seal, cards, banners) | `public/education/` and any folder you add under `public/`; see [Page blocks](#page-blocks) |
 | Menu icons | `src/xmb/icons.js`: an item's `icon` must be one of the names there, otherwise it shows sparkles |
 | The PSP model | `public/models/psp-v3.glb`, built from `assets-src/psp.glb` by `npm run model:optimize` (needs Blender and KTX-Software). A rebuild is pending; see **The model pipeline** in `docs/xmb.md` for the steps. |
 

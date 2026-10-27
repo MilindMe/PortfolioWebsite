@@ -9,7 +9,9 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | Path | What it does |
 | --- | --- |
 | `docs/content.md` | **Where every piece of content lives** and how to edit it safely. |
+| `public/education/` | Pictures used on detail pages (the Education seal). |
 | `src/xmb/content.js` | **All the content.** Categories, items, project write-ups, links, photo captions. Start here to edit the site. |
+| `src/features.js` | Hard-coded feature flags. `bo2Theme` (off) hides the Black Ops II theme. |
 | `src/xmb/themes.js` | Themes (Crimson is the default), the page `experiences` they belong to, `themeColors()`, `themeExperience()`, and saving the chosen theme to `localStorage`. |
 | `src/xmb/state.js` | The navigation reducer (`xmbReducer`), its initial state (`initialXmb`), and `xmbLink`, which decides when an action opens a URL. |
 | `src/xmb/XmbRenderer.js` | Draws the whole OS into an offscreen canvas that becomes the screen's texture. Owns animation, layout constants and hit boxes. |
@@ -93,6 +95,14 @@ The reducer is pure and has no DOM access. Side effects such as opening links li
   - `CAT_X`, `CAT_Y`, `CAT_W`: where the category bar sits and how far apart categories are
   - `ROW_H`, `ITEM_Y`, `ABOVE_Y`: item rows below and above the bar
   - `BODY_TOP`, `BODY_BOTTOM`, `LINE_H`: detail text area
+  - `FLOAT_GAP`, `GRID_GAP`: space beside a floated image and between grid cards
+
+### Detail pages (`layoutPage`, `drawPage`)
+
+- **Layout:** `layoutPage()` turns a page's `blocks` (or plain `body`) into positioned ops once per item and skin (cached in `this.wrapped`). Ops are text runs, bullet and timeline dots, rails, heading rules, `image` boxes and `card` backgrounds. Text wraps line by line, so a floated image narrows only the lines beside it (`beside()`, `indent()`, `room()`), and the next grid or image clears the float. Every image box has a fixed size from the content, so pictures arriving later never move anything.
+- **Drawing:** `drawPage()` paints the ops each redraw, clipped to the body and shifted by the scroll. It skips ops outside the visible band, using an op's height for images and cards.
+- **Images:** `pageImage()` draws them through `photo()` (the same loader and cache as Memories), so a picture downloads when its page first opens and triggers a redraw when it arrives. `contain` fits the whole picture (logos, pushed to the float's side), and `cover` crops to fill (banners, cards). A missing file leaves a faint placeholder.
+- **Content format** is documented for editors in `docs/content.md` (Page blocks). `layoutPage` is exported for the renderer tests.
 
 ### Layers, drawn in order each frame
 

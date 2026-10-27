@@ -2,7 +2,7 @@ import React, {Suspense, lazy, useCallback, useEffect, useReducer, useRef, useSt
 import {RefreshCw, RotateCcw, Volume2, VolumeX} from 'lucide-react';
 import LoadingScreen from './LoadingScreen';
 import {lightingModes} from './lighting';
-import {START, initialXmb, readingFocus, xmbLink, xmbReducer, xmbSound} from './xmb/state';
+import {START, initialXmb, readingFocus, trophiesFor, xmbLink, xmbReducer, xmbSound} from './xmb/state';
 import {RESUME_FILE, RESUME_URL, categories} from './xmb/content';
 import XmbA11y from './xmb/XmbA11y';
 import {gameDue, roundPay, withClock} from './xmb/game';
@@ -25,7 +25,8 @@ import MainMenu from './experiences/bo2/MainMenu';
 import Bo2Backdrop from './experiences/bo2/Bo2Backdrop';
 
 preloadModel();
-// Lets trophies be tried from the console while developing: awardTrophy('first-steps').
+// Lets trophies be tried from the console while developing: awardTrophy('about-me'). Clear them with
+// localStorage.removeItem('trophies-earned').
 if (import.meta.env.DEV) window.awardTrophy = awardTrophy;
 
 // three.js lives in this chunk, so the shell and loading screen paint before it has downloaded.
@@ -86,7 +87,7 @@ export default function App() {
   useEffect(() => saveCash(cash), [cash]);
   // Links open here, inside the key or pointer event, so the browser allows the new tab. Each action plays its menu
   // sound, unless it's silent (moves the page makes by itself). Actions bound for Button Rush get the time and a
-  // random sequence here, so the reducer stays pure, clearing its last round earns its trophy, and in GTA each
+  // random sequence here, so the reducer stays pure, whatever the action earns gets its trophy, and in GTA each
   // cleared round pays out. Returns the new state, so the scene can draw it without waiting for React.
   const xmbAction = useCallback((input, {silent = false} = {}) => {
     const previous = xmbRef.current, action = withClock(previous, input), url = xmbLink(previous, action);
@@ -95,7 +96,7 @@ export default function App() {
     else if (url) open(url, '_blank', 'noopener');
     xmbRef.current = xmbReducer(previous, action);
     if (!silent) playSound(xmbSound(previous, xmbRef.current, action, !!url));
-    if (xmbRef.current.game?.status === 'won' && previous.game?.status !== 'won') awardTrophy('button-rush');
+    trophiesFor(previous, xmbRef.current).forEach(awardTrophy);
     const pay = previous.unlocked && themeExperience(previous.theme).id === 'gta' ? roundPay(previous.game, xmbRef.current.game) : 0;
     if (pay) setCash(value => value + pay);
     dispatchXmb(action);

@@ -9,7 +9,7 @@ const bundle=await build({configFile:false,logLevel:'silent',build:{write:false,
  rollupOptions:{external:['three']}}});
 const output=(Array.isArray(bundle)?bundle:[bundle]).flatMap(result=>result.output);
 const code=output.find(file=>file.type==='chunk').code.replaceAll('"three"',JSON.stringify(new URL('../node_modules/three/build/three.module.js',import.meta.url).href));
-const {XmbRenderer}=await import(`data:text/javascript;base64,${Buffer.from(code+'\n//# sourceURL=xmb-renderer-under-test.js').toString('base64')}`);
+const {XmbRenderer,layoutPage}=await import(`data:text/javascript;base64,${Buffer.from(code+'\n//# sourceURL=xmb-renderer-under-test.js').toString('base64')}`);
 
 function canvas(){
  const canvas={width:0,height:0};
@@ -165,5 +165,47 @@ test('a move draws on the next refresh and then at about 60 fps, even on a 144 H
  run(1000);
  const still=run(1000);
  assert(still>=27&&still<=31,`${still} frames in a still second`);
+ xmb.dispose();
+});
+
+test('a right-floated image sits at the edge, and the text beside it wraps short of it until it passes the image',()=>{
+ const ctx={font:'',measureText:text=>({width:text.length*6})};
+ const width=412, page=layoutPage(ctx,{blocks:[
+  {type:'image',src:'/a.webp',align:'right',width:76},
+  {type:'h',text:'University of Waterloo'},
+  {type:'p',text:'A long paragraph that has to wrap before it reaches the picture floated on the right of the page, and then carries on below it at full width once it is past the bottom of the image. '.repeat(3)},
+ ]},width,{accent:'#fff',headFont:'9px sans-serif',headH:12});
+ const image=page.ops.find(op=>op.image);
+ assert.deepEqual([image.x,image.y,image.w,image.h],[width-76,0,76,76]);
+ const lines=page.ops.filter(op=>op.text);
+ for(const line of lines)if(line.y<76)assert(line.x+line.text.length*6<=width-76-12,`"${line.text}" runs under the image`);
+ assert(lines.some(line=>line.y>=76&&line.x+line.text.length*6>width-76-12),'text below the image uses the full width');
+ assert(page.height>=76);
+});
+
+test('a grid lays cards out in columns with equal heights per row',()=>{
+ const ctx={font:'',measureText:text=>({width:text.length*6})};
+ const page=layoutPage(ctx,{blocks:[{type:'grid',columns:2,items:[
+  {image:'/a.webp',title:'One',text:'Short'},{title:'Two',text:'A much longer line of text that wraps over several lines in its card'},{title:'Three'},
+ ]}]},412,{accent:'#fff',headFont:'9px sans-serif',headH:12});
+ const cards=page.ops.filter(op=>op.card);
+ assert.equal(cards.length,3);
+ assert.equal(cards[0].y,cards[1].y);assert(cards[1].x>cards[0].x);assert.equal(cards[0].h,cards[1].h);
+ assert(cards[2].y>=cards[0].y+cards[0].h,'the third card starts a new row');
+ assert(page.ops.some(op=>op.image&&op.src==='/a.webp'&&op.w===cards[0].w));
+});
+
+test('Education draws the seal once it loads',async t=>{
+ const previous=globalThis.Image;
+ // A stand-in Image that "loads" straight away and records itself when drawn.
+ globalThis.Image=class{set src(value){this.url=value;this.naturalWidth=this.naturalHeight=256;queueMicrotask(()=>this.onload?.());}getContext(){return {events:[`IMG ${this.url}`]};}};
+ t.after(()=>{if(previous===undefined)delete globalThis.Image;else globalThis.Image=previous;});
+ const {xmb,state}=renderer(t);
+ const about=3, education=3;
+ xmb.setState({...state,cat:about,item:state.item.map((value,i)=>i===about?education:value),view:'detail'});xmb.tick(2000);
+ await new Promise(resolve=>setTimeout(resolve,0));
+ xmb.out.events=[];xmb.draw(2,99,true);
+ assert(xmb.out.events.includes('UNIVERSITY OF WATERLOO'),JSON.stringify(xmb.out.events));
+ assert(xmb.out.events.includes('IMG /education/uw-seal.webp'),JSON.stringify(xmb.out.events));
  xmb.dispose();
 });
