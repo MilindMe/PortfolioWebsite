@@ -75,9 +75,11 @@ export const categories = [
    {id:'experience', label:'Work Experience', icon:'briefcase',
     detail:{title:'Experience', sub:'Most recent first', focus:true, blocks:[
      {type:'timeline', entries:[
-      {when:'2024 — Present', role:'Role', org:'Company', current:true, points:['What you own and a highlight or two.', 'An outcome with a number that shows impact.']},
-      {when:'2022 — 2024', role:'Role', org:'Company', points:['What you shipped.', 'Something you led or improved.']},
-      {when:'2021 — 2022', role:'Intern', org:'Company', points:['What you built and learned.']},
+      {when:'Sept 2026 – Dec 2026', role:'Software Developer', org:'TextNow – Incoming'},
+      {when:'Jan 2026 – Apr 2026', role:'Full Stack AI Developer', org:'Revvity'},
+      {when:'May 2025 – Aug 2025', role:'Software Engineer', org:'BDO IT Consulting'},
+      {when:'May 2024 – Aug 2024', role:'Software Developer', org:'BDO IT Consulting'},
+      {when:'Jul 2023 – Aug 2023', role:'Technology Consultant', org:'PricewaterhouseCoopers'},
      ]},
     ], links:[resume]}},
 

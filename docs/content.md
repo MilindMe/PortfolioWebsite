@@ -167,3 +167,13 @@ The GTA cash bar's digits are an image. To redraw it, see `scripts/render-cash-s
 ### Leave a memo
 
 Memories starts with a **Leave a memo** item (the ⊕ icon, `memo:true` in `content.js`). Pressing ✕ on it opens `src/LeaveMemo.jsx`, a native dialog with an invite-code step and a message form. It looks like a PSP system dialog, tinted with the current theme, and Persona 5, GTA and Black Ops II each restyle it (`.system-dialog` in `styles.css`, shared with the help dialog). The photo view steps past the item, so it can sit anywhere in the column. Set the hard-coded invite code in `src/memo.js` (`CAMWAD-MILIND`); matching ignores case and surrounding spaces. The recipient comes from Contact’s email item in `src/xmb/content.js`. “Open email draft” fills the subject and message in the visitor’s email app, where a photo can be attached. Memories are added to the site manually after review. This flow uses no backend and stores neither codes nor draft messages in browser storage.
+
+## Review the semantic copy
+
+Open `/content.html` on the dev server or production build for a readable preview of all portfolio copy. Edit `src/xmb/content.js` to update the PSP, the screen-reader copy and the preview together. The preview is marked `noindex` because the homepage is the search destination.
+
+The Vite plugin in `scripts/portfolio-html.mjs` renders `src/xmb/PortfolioContents.jsx` into the homepage HTML during development and production builds. React replaces that initial copy with the interactive app, which includes the same semantic component. With JavaScript disabled, the initial copy remains readable. No Worker runtime or backend is needed. Run `npm run build` after editing content to regenerate the deployed HTML.
+
+## Search discovery
+
+The production URL is `https://milindmeetarbha.com/`, declared as the homepage canonical URL in `index.html`. `public/robots.txt` allows crawling and points to `public/sitemap.xml`. The sitemap lists only the homepage; `/content.html` remains crawlable so its `noindex` directive can be read, but is excluded from the sitemap. Vite copies both files to the production output. Update these URLs together if the domain changes.

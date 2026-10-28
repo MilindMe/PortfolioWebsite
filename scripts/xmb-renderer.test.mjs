@@ -137,7 +137,7 @@ test('laid-out pages draw their headings and timeline, and scroll when long',t=>
  const open=item=>{xmb.setState({...state,cat:3,item:state.item.map((value,i)=>i===3?item:value),view:'detail'});xmb.tick(now+=33);xmb.out.events=[];xmb.draw(2,99,true);return xmb.out.events;};
  assert(open(0).includes('WHAT I DO'),JSON.stringify(xmb.out.events));
  const experience=open(1);
- assert(experience.includes('2024 — Present')&&experience.includes('Résumé'),JSON.stringify(experience));
+ assert(experience.includes('Sept 2026 – Dec 2026')&&experience.includes('Résumé'),JSON.stringify(experience));
  assert(xmb.maxScroll>0);
  xmb.dispose();
 });
