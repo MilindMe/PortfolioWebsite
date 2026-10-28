@@ -95,10 +95,11 @@ For Button Rush's own settings, see [Game tuning](#game-tuning) below.
 | --- | --- |
 | Browser tab title and search description | `index.html` (`<title>`, `<meta name="description">`) |
 | Your name in the top-left corner | `src/App.jsx`, search for `Milind Meetarbhan`. GTA shows it as an image instead (`public/experiences/gta/name.png`, set in Pricedown), so a name change needs a new image too. |
-| "Press Start" / "Select a theme first" under the PSP | `src/App.jsx`, the `theme-prompt` line |
+| "Tap Start to Begin" / "Select a theme first" under the PSP | `src/App.jsx`, the `theme-prompt` line |
 | "START" and "Press ✕ or tap the screen" on the PSP | `src/xmb/XmbRenderer.js`, `startScreen()` |
 | Loading screen ("Loading...", "Desktop is recommended...") | `src/LoadingScreen.jsx` |
 | Phone notice | `src/PhoneNotice.jsx` |
+| Help card (the ? in the bottom-right corner) | `src/Help.jsx` |
 | Quick-link icons (top right) | `src/QuickLinks.jsx`; the URLs come from `content.js` (see above) |
 | GTA cutscene subtitle | `src/experiences/gta/GtaCutscene.jsx` |
 | Persona 5 calling card ("Take your heart") | `src/experiences/persona5/CallingCard.jsx` |
@@ -106,7 +107,7 @@ For Button Rush's own settings, see [Game tuning](#game-tuning) below.
 | Trophies (title, description, grade) | `src/trophies.js`; see [Trophies](#trophies) |
 
 ## Trophies
-Each trophy is earned once per visitor (kept in the browser) and pops up as a PS3-style card in the top-right corner.
+Each trophy is earned once per visitor (kept in the browser) and pops up as a PS4-style banner in the top-right corner (`src/TrophyToast.jsx`). **Settings → Trophies** on the PSP lists them all, platinum first, greyed out until earned. The trophy pictures are drawn from `src/trophyArt.js` (canvas) and `src/TrophyIcon.jsx` (page).
 
 | Trophy | Grade | Earned by |
 | --- | --- | --- |
@@ -165,4 +166,4 @@ The GTA cash bar's digits are an image. To redraw it, see `scripts/render-cash-s
 
 ### Leave a memo
 
-Memories shows a “+ Leave a memo!” button beneath the PSP. `src/LeaveMemo.jsx` opens a native dialog with an invite-code step and a message form. Set the hard-coded invite code in `src/memo.js` (`CAMWAD-MILIND`); matching ignores case and surrounding spaces. The recipient comes from Contact’s email item in `src/xmb/content.js`. “Open email draft” fills the subject and message in the visitor’s email app, where a photo can be attached. Memories are added to the site manually after review. This flow uses no backend and stores neither codes nor draft messages in browser storage.
+Memories starts with a **Leave a memo** item (the ⊕ icon, `memo:true` in `content.js`). Pressing ✕ on it opens `src/LeaveMemo.jsx`, a native dialog with an invite-code step and a message form. It looks like a PSP system dialog, tinted with the current theme, and Persona 5, GTA and Black Ops II each restyle it (`.system-dialog` in `styles.css`, shared with the help dialog). The photo view steps past the item, so it can sit anywhere in the column. Set the hard-coded invite code in `src/memo.js` (`CAMWAD-MILIND`); matching ignores case and surrounding spaces. The recipient comes from Contact’s email item in `src/xmb/content.js`. “Open email draft” fills the subject and message in the visitor’s email app, where a photo can be attached. Memories are added to the site manually after review. This flow uses no backend and stores neither codes nor draft messages in browser storage.

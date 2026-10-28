@@ -2,7 +2,7 @@ import React, {Suspense, lazy, useCallback, useEffect, useReducer, useRef, useSt
 import {RefreshCw, RotateCcw, Volume2, VolumeX} from 'lucide-react';
 import LoadingScreen from './LoadingScreen';
 import {lightingModes} from './lighting';
-import {START, initialXmb, readingFocus, trophiesFor, xmbLink, xmbReducer, xmbSound} from './xmb/state';
+import {START, initialXmb, readingFocus, trophiesFor, xmbLink, xmbOpensMemo, xmbReducer, xmbSound} from './xmb/state';
 import {RESUME_FILE, RESUME_URL, categories} from './xmb/content';
 import XmbA11y from './xmb/XmbA11y';
 import {gameDue, roundPay, withClock} from './xmb/game';
@@ -13,6 +13,7 @@ import LeaveMemo from './LeaveMemo';
 import {PHONE, ROTATION_LOCKED} from './layout';
 import PhoneNotice from './PhoneNotice';
 import TrophyToast from './TrophyToast';
+import Help from './Help';
 import {isMuted, playSound, setMuted} from './sound';
 import {awardTrophy} from './trophies';
 import {preloadModel} from './modelAsset';
@@ -86,17 +87,21 @@ export default function App() {
   // GTA's cash, earned by clearing Button Rush rounds while the GTA theme is on, and kept between visits.
   const [cash, setCash] = useState(savedCash);
   useEffect(() => saveCash(cash), [cash]);
-  // Links open here, inside the key or pointer event, so the browser allows the new tab. Each action plays its menu
+  // Memories' Leave a memo item opens its dialog over the page.
+  const [memoOpen, setMemoOpen] = useState(false);
+  const openMemo = useCallback(() => setMemoOpen(true), []);
+  // Links open here, inside the key or pointer event, so the browser allows the new tab, and so does the memo dialog. Each action plays its menu
   // sound, unless it's silent (moves the page makes by itself). Actions bound for Button Rush get the time and a
   // random sequence here, so the reducer stays pure, whatever the action earns gets its trophy, and in GTA each
   // cleared round pays out. Returns the new state, so the scene can draw it without waiting for React.
   const xmbAction = useCallback((input, {silent = false} = {}) => {
-    const previous = xmbRef.current, action = withClock(previous, input), url = xmbLink(previous, action);
+    const previous = xmbRef.current, action = withClock(previous, input), url = xmbLink(previous, action), memo = xmbOpensMemo(previous, action);
+    if (memo) setMemoOpen(true);
     if (url === RESUME_URL) downloadResume();
     else if (url?.startsWith('mailto:')) location.href = url;
     else if (url) open(url, '_blank', 'noopener');
     xmbRef.current = xmbReducer(previous, action);
-    if (!silent) playSound(xmbSound(previous, xmbRef.current, action, !!url));
+    if (!silent) playSound(xmbSound(previous, xmbRef.current, action, !!url || memo));
     trophiesFor(previous, xmbRef.current).forEach(awardTrophy);
     const pay = previous.unlocked && themeExperience(previous.theme).id === 'gta' ? roundPay(previous.game, xmbRef.current.game) : 0;
     if (pay) setCash(value => value + pay);
@@ -200,15 +205,16 @@ export default function App() {
         {experience.id === 'gta' ? <img className="site-name-art" src={GTA_NAME} alt="Milind Meetarbhan" /> : 'Milind Meetarbhan'}
       </button>
       <QuickLinks />
-      {xmb.unlocked && categories[xmb.cat].id==='memories' && <LeaveMemo />}
-      <p key={nudge} className={`theme-prompt${xmb.unlocked ? ' done' : ''}${nudge ? ' nudge' : ''}`} aria-hidden="true">{xmb.started ? 'Select a theme first' : 'Press Start'}</p>
-      <XmbA11y state={xmb} />
+      <LeaveMemo open={memoOpen} onClose={() => setMemoOpen(false)} colors={themeColors(xmb.theme)} />
+      <p key={nudge} className={`theme-prompt${xmb.unlocked ? ' done' : ''}${nudge ? ' nudge' : ''}`} aria-hidden="true">{xmb.started ? 'Select a theme first' : 'Tap Start to Begin'}</p>
+      <XmbA11y state={xmb} onMemo={openMemo} />
       {status === 'error' && <button className="scene-status retry" onClick={retry} aria-label="Unable to load the PSP. Retry" title="Unable to load the PSP. Retry"><RefreshCw size={24} /></button>}
       {!ROTATION_LOCKED && <button className="reset-view" onClick={() => setReset(value => value + 1)} aria-label="Reset camera view" title="Reset camera view"><RotateCcw size={17} strokeWidth={1.5} /></button>}
       <button className="sound-toggle" onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? 'Turn menu sounds on' : 'Turn menu sounds off'} title={muted ? 'Sounds off' : 'Sounds on'}>
         {muted ? <VolumeX size={18} strokeWidth={1.5} /> : <Volume2 size={18} strokeWidth={1.5} />}
       </button>
       <TrophyToast />
+      <Help colors={themeColors(xmb.theme)} />
       {/* Each press steps to the next lighting mode, wrapping round. Phones go without it: their layout has no room. */}
       {!PHONE && <button className="light-toggle" onClick={nextLight} style={{'--turn': `${lightTurns * 120}deg`}}
         aria-label={`Lighting: ${mode.label}. Change lighting`} title={`Lighting: ${mode.label}`}><BrightnessIcon /></button>}

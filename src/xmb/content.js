@@ -1,6 +1,12 @@
 import {themes} from './themes';
+import {GRADES, trophies} from '../trophies';
 
 const themeItem=theme=>({id:`theme-${theme.id}`, label:theme.label, sub:theme.sub, icon:'palette', theme:theme.id});
+// The Trophies folder at the bottom of Settings: every trophy, platinum first and down through the grades, drawn
+// greyed out until it is earned, and hidden ones nameless until then (see itemLabel and itemSub in state.js, and
+// drawTrophy in src/trophyArt.js).
+const trophyItems=Object.entries(trophies).map(([id,{title,grade,hidden}])=>({id:`trophy-${id}`, label:title, trophy:id, grade, hidden:!!hidden}))
+ .sort((a,b)=>GRADES.indexOf(b.grade)-GRADES.indexOf(a.grade));
 
 // The résumé PDF, linked from About, Experience, Contact and the quick links. Drop the file at public/resume.pdf;
 // it is served as a static file and always downloads (as RESUME_FILE), never opens in a tab (see public/_headers).
@@ -10,9 +16,9 @@ const resume={label:'Résumé', url:RESUME_URL, icon:'resume'};
 // Everything the PSP's XMB shows. Edit freely; the screen and the screen-reader copy both read from here.
 // Item fields: label, sub (subtitle), icon (see icons.js), detail {title, body, links:[{label,url,icon?}]},
 // link (opened directly on confirm), photo (path under /public) and caption, folder (a list of items it opens), or
-// game (opens the Button Rush mini game, see game.js).
+// game (opens the Button Rush mini game, see game.js), or memo (opens the Leave a memo dialog, see src/LeaveMemo.jsx).
 // Settings is generated from themes.js: the colour-only themes sit in the Classics folder, and each game
-// experience gets its own item. Theme items carry theme and apply it on confirm.
+// experience gets its own item. Trophies comes last, listing what the visitor has collected. Theme items carry theme and apply it on confirm.
 // A detail can use blocks instead of body for a laid-out page: {type:'h', text} headings, {type:'p', text}
 // paragraphs, {type:'list', items:[...]} bullets, {type:'timeline', entries:[{when, role, org, points, current}]},
 // {type:'image', src, alt, align, width, height, caption} pictures (align 'left' or 'right' floats it beside the blocks
@@ -27,14 +33,15 @@ export const categories = [
     detail:{title:'PSP Portfolio', focus:true, body:'This site. A PSP model rendered with three.js whose screen runs a recreation of the XMB, drawn into a canvas texture and driven by keyboard, touch and the PSP\'s own buttons.\n\nStack: React 19, Vite, three.js, Canvas 2D.',
      links:[{label:'Source', url:'https://github.com/MilindMe'}]}},
 
-   {id:'project-two', label:'Music Wesbite', sub:'Replace with a real project', icon:'code',
-    detail:{title:'Project Two', focus:true, body:'Describe the problem, what you built and what you learned. Keep paragraphs short; the PSP screen is small and scrolls with ↑ ↓.',
-     links:[{label:'GitHub', url:'https://github.com/'}, 
-      {label:'Live demo', url:'https://example.com/'}]}},
+   {id:'twotogether', label:'TwoTogether', sub:'Swift · Python', icon:'code',
+    detail:{title:'TwoTogether', focus:true, body:'A habit accountability app for iOS.\n\nStack: Swift, Python.',
+     links:[{label:'Source', url:'https://github.com/MilindMe/TwoTogether'}]}},
 
-   {id:'project-three', label:'Lalwa', sub:'Replace with a real project', icon:'code',
-    detail:{title:'Project Three', focus:true, body:'Another project write-up. Mention the stack, your role and any numbers that show impact.',
-     links:[{label:'GitHub', url:'https://github.com/'}]}},
+   {id:'lalwa', label:'Lalwa', sub:'Next.js · Python · Firebase', icon:'code',
+    detail:{title:'Lalwa', focus:true, body:'Stack: Next.js, Python, Firebase.'}},
+
+   // A placeholder with nothing to open: ✕ on it does nothing.
+   {id:'coming-soon', label:'Updating soon', sub:'More projects on the way', icon:'code'},
 
   ],
  },
@@ -47,6 +54,7 @@ export const categories = [
  {
   id:'memories', label:'Memories', icon:'photo',
   items:[
+   {id:'leave-memo', label:'Leave a memo', sub:'Have an invite code?', icon:'plus', memo:true},
    {id:'rodrigues', label:'Rodrigues', icon:'camera', photo:'/memories/rodrigues.webp', caption:'Rodrigues'},
   ],
  },
@@ -99,6 +107,7 @@ export const categories = [
   items:[
    {id:'classics', label:'Classics', sub:'Colour themes', icon:'folder', folder:themes.filter(theme=>theme.experience==='classic').map(themeItem)},
    ...themes.filter(theme=>theme.experience!=='classic').map(themeItem),
+   {id:'trophies', label:'Trophies', icon:'trophy', folder:trophyItems, trophies:true},
   ],
  },
 ];

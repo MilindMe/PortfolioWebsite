@@ -12,10 +12,10 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .scene { position: absolute; inset: 0; }
 .scene canvas { width: 100%; height: 100%; display: block; }
 /* The corner controls are bare logos like the quick links: off-white with a soft shadow, brightening on hover. */
-.reset-view, .light-toggle, .sound-toggle { position: absolute; z-index: 4; right: 26px; width: 40px; height: 40px; display: grid; place-items: center; color: #f5f5f7; opacity: .82; filter: drop-shadow(0 1px 6px #00000080); transition: opacity .25s, color .25s, transform .25s; }
-.reset-view:focus-visible, .light-toggle:focus-visible, .sound-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 6px; }
+.reset-view, .light-toggle, .sound-toggle, .help-toggle { position: absolute; z-index: 4; right: 26px; width: 40px; height: 40px; display: grid; place-items: center; color: #f5f5f7; opacity: .82; filter: drop-shadow(0 1px 6px #00000080); transition: opacity .25s, color .25s, transform .25s; }
+.reset-view:focus-visible, .light-toggle:focus-visible, .sound-toggle:focus-visible, .help-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 6px; }
 .reset-view { bottom: 26px; }
-.reset-view:hover, .light-toggle:hover, .sound-toggle:hover { color: #fff; opacity: 1; }
+.reset-view:hover, .light-toggle:hover, .sound-toggle:hover, .help-toggle:hover { color: #fff; opacity: 1; }
 /* Each press of the lighting control turns its icon a little, as it steps to the next mode. */
 .light-toggle svg { transition: transform .4s cubic-bezier(.3,1.4,.5,1); transform: rotate(var(--turn, 0deg)); }
 .scene-status { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #cdbb95; display: grid; place-items: center; width: 52px; height: 52px; }
@@ -44,6 +44,10 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .sound-toggle[aria-pressed="false"]{opacity:.5}
 .page.rotation-locked .sound-toggle{bottom:26px}
 .page.rotation-locked .light-toggle{bottom:76px}
+/* Help sits at the top of the stack. Phones have no lighting control, so it takes that slot. */
+.help-toggle{bottom:176px}
+.page.rotation-locked .help-toggle{bottom:126px}
+.page.phone .help-toggle{bottom:76px}
 /* Page wheel: Persona 5–style half wheel on the left (above the PSP on narrow screens). Sizes come from --r and --font. */
 .page-wheel{--accent:#c8222c;--paper:#f4f1ea;--spin:cubic-bezier(.3,1.45,.5,1);position:absolute;z-index:3;left:0;top:0;overflow:hidden;pointer-events:none;
  transform-origin:0 50%;animation:wheel-enter .7s var(--spin) var(--delay,0ms) both}
@@ -274,16 +278,20 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
   .sound-toggle { right: 16px; bottom: 110px; width: 36px; height: 36px; }
   .page.rotation-locked .sound-toggle { bottom: 18px; }
   .page.rotation-locked .light-toggle { bottom: 64px; }
+  .help-toggle { right: 16px; bottom: 156px; width: 36px; height: 36px; }
+  .page.rotation-locked .help-toggle, .page.phone .help-toggle { bottom: 64px; }
 }
 /* Matches the narrow breakpoint in src/layout.js: the PSP sits at the bottom, so the lighting control moves to the top corner. */
 @media (max-width: 759px) {
   .page.rotation-locked .light-toggle { top: 16px; bottom: auto; }
+  .page.rotation-locked .help-toggle { bottom: 76px; }
   .page.rotation-locked .quick-links { right: 66px; top: 17px; }
   .page.rotation-locked .gta-cash { right: 16px; top: 60px; }
   /* The wheel sits above the PSP here, so it tucks upwards, and leaves room for the name in the corner. */
   .page:not(.phone) .wheel-dock.tucked { transform: translateY(-100%); }
   .page:not(.phone) .bo2-menu { padding-top: 40px; }
 }
+@media (max-width: 700px) { .page.rotation-locked .help-toggle { bottom: 64px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* Phones (PHONE in src/layout.js): the page is always laid out landscape, as a size container so its own units (cqw,
@@ -314,53 +322,101 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .phone-notice-turn svg{flex:none;width:26px;height:26px;color:#d8be91;animation:phone-turn 2.6s ease-in-out infinite}
 .phone-notice button{width:100%;margin-top:6px;padding:12px;border-radius:12px;background:#d8be91;color:#14201a;font-weight:700}
 @keyframes phone-turn{0%,20%{transform:none}45%,75%{transform:rotate(-90deg)}100%{transform:none}}
-/* The PS3's trophy card (TrophyToast): slides in at the top right, holds, then slides back out. */
+/* The PS4's trophy banner (TrophyToast): a flat dark-grey strip with the trophy in a square, its title beside a small
+   trophy and "You have earned a trophy!" beneath. Slides in at the top right, holds, then slides back out. */
 .trophy-region{position:absolute;z-index:6;top:20px;right:22px;pointer-events:none}
-.trophy-card{display:flex;align-items:center;gap:12px;min-width:250px;max-width:min(360px,calc(100vw - 44px));padding:9px 18px 9px 9px;border-radius:9px;
- background:linear-gradient(180deg,#2b2c31eb,#16171bf0);border:1px solid #ffffff1f;box-shadow:0 8px 24px #000000a0,inset 0 1px #ffffff14;color:#f2f2f5;
- animation:trophy-card var(--shown) ease both}
-.trophy-thumb{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:4px;border:2px solid #d9dbe2;
- background:radial-gradient(circle at 35% 30%,#3f4a7a,#121735 70%);color:var(--grade)}
-.trophy-thumb svg{width:24px;height:24px;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--grade) 60%,transparent))}
+.trophy-card{display:flex;align-items:center;gap:12px;min-width:270px;max-width:min(380px,calc(100vw - 44px));padding:7px 22px 7px 7px;border-radius:2px;
+ background:#2a2b2ee8;border:1px solid #ffffff12;box-shadow:0 6px 20px #00000090;color:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+ -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:trophy-card var(--shown) ease both}
+.trophy-thumb{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:2px;background:linear-gradient(#45474c,#303236);box-shadow:inset 0 0 0 1px #ffffff14}
+.trophy-thumb svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px #0009)}
 .trophy-text{min-width:0}
 .trophy-title{display:flex;align-items:center;gap:6px;margin:0;font-size:15px;line-height:1.25}
-.trophy-glyph{flex:none;width:15px;height:15px;color:var(--grade)}
-.trophy-sub{margin:3px 0 0;color:#a9abb5;font-size:12px}
-.trophy-card.grade-bronze{--grade:#d08a54}
-.trophy-card.grade-silver{--grade:#d6dbe4}
-.trophy-card.grade-gold{--grade:#f2c14e}
-.trophy-card.grade-platinum{--grade:#bfe3ff}
+.trophy-glyph{flex:none;width:16px;height:16px}
+.trophy-sub{margin:2px 0 0;color:#9a9ca2;font-size:12.5px}
 @keyframes trophy-card{0%{transform:translateX(24px);opacity:0}7%,92%{transform:none;opacity:1}100%{transform:translateX(24px);opacity:0}}
 .page.phone .trophy-region{top:10px;right:14px}
 
-/* A shared memory starts as an invite, then hands a personal note to the visitor's email app. */
-.leave-memo{position:absolute;z-index:4;left:50%;bottom:max(24px,5vh);transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:11px 18px;
- border:1px solid #d8be9166;border-radius:999px;background:#14231fe8;color:#eee8d9;font-size:14px;box-shadow:0 4px 20px #0006;transition:background .2s,border-color .2s}
-.leave-memo:hover{background:#263b31;border-color:#d8be91}
-.page.phone .leave-memo{bottom:max(8px,2cqh);padding:7px 12px;font-size:12px;gap:6px}
-.page.phone .leave-memo svg{width:15px;height:15px}
-.memo-dialog{width:min(440px,calc(100vw - 32px));max-height:calc(100svh - 32px);margin:auto;overflow:auto;padding:30px;border:1px solid #d8be914d;border-radius:18px;
- background:linear-gradient(145deg,#20332b,#111e19);color:#eee8d9;box-shadow:0 24px 80px #0009;font:14px/1.5 Inter,Arial,sans-serif}
-.memo-dialog::backdrop{background:#020705b8;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
-.memo-close{position:absolute;right:13px;top:13px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;color:#b9c5b8}
-.memo-close:hover{background:#ffffff0d;color:#fff}
-.memo-symbol{width:48px;height:48px;display:grid;place-items:center;border:1px solid #d8be9138;border-radius:12px;color:#d8be91;background:#d8be9108}
-.memo-eyebrow{margin:19px 0 5px;font-size:10px;letter-spacing:.2em;color:#cdb58c}
-.memo-dialog h2{margin:0 0 10px;font-size:25px;font-weight:500;letter-spacing:-.035em;line-height:1.2}
-.memo-dialog #memo-description{margin:0 0 23px;color:#bdc9bd}
-.memo-dialog form{display:grid;gap:9px}
-.memo-dialog label{font-size:12px;font-weight:600;color:#e4dfd2}
-.memo-dialog label span{font-weight:400;color:#9eafa1}
-.memo-dialog input,.memo-dialog textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid #ffffff29;border-radius:8px;background:#09160fb3;color:#f6f2e9;font:inherit;font-size:16px;outline:none;transition:border-color .2s}
-.memo-dialog input:focus,.memo-dialog textarea:focus{border-color:#d8be91;box-shadow:0 0 0 2px #d8be9120}
-.memo-dialog input[aria-invalid="true"],.memo-dialog textarea[aria-invalid="true"]{border-color:#efa99c}
-.memo-dialog textarea{resize:vertical;min-height:110px;max-height:240px}
-.memo-dialog input+label{margin-top:8px}
-.memo-dialog textarea::placeholder{color:#829485}
-.memo-submit{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:9px;padding:12px 15px;border-radius:8px;background:#d8be91;color:#14231c;font-weight:700}
-.memo-submit:hover{background:#e6cda3}
-.memo-submit svg:last-child{margin-left:auto}
-.memo-submit svg:first-child{flex:none}
-.memo-dialog .memo-error{margin:0;font-size:12px;color:#ffb7a7}
-.memo-dialog .memo-handoff{margin:2px 0 0;font-size:12px;color:#a4b5a6}
-@media(max-height:500px){.memo-dialog{padding:22px;max-height:calc(100svh - 16px)}.memo-symbol{display:none}.memo-eyebrow{margin-top:0}.memo-dialog #memo-description{margin-bottom:15px}.memo-dialog textarea{min-height:80px}}
+/* The page's system dialogs: Leave a memo (Memories → Leave a memo on the PSP: an invite code, then a personal note
+   handed to the visitor's email app) and Help. Classic draws them like a PSP system dialog: a band across the whole
+   screen between two thin rules, tinted with the theme's colours (--dialog-a and --dialog-b, from App), with the XMB's
+   ✕ and ○ prompts as their actions. Each game experience restyles them below. */
+.system-dialog{--dialog-a:#c8222c;--dialog-b:#3b070b;width:100vw;max-width:none;max-height:calc(100svh - 24px);margin:auto 0;padding:0;overflow:auto;
+ border:0;border-block:1px solid #ffffff70;color:#f4f4f6;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+ background:linear-gradient(90deg,#0000,color-mix(in srgb,var(--dialog-a) 38%,#0000) 25% 75%,#0000),#09090dde;box-shadow:0 0 80px #000a;
+ animation:system-in .28s cubic-bezier(.2,.8,.3,1) both}
+.system-dialog::backdrop{background:color-mix(in srgb,var(--dialog-b,#000) 45%,#000000b8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+@keyframes system-in{from{opacity:0;scale:1 .5}}
+@media(prefers-reduced-motion:reduce){.system-dialog{animation:none}}
+.system-panel{width:min(430px,100% - 32px);margin:0 auto;padding:22px 0 16px}
+.system-eyebrow{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:400 10px/1 Michroma,"Arial Black",sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#ffffffa8}
+.system-dialog h2{margin:0 0 6px;font-size:22px;font-weight:400;letter-spacing:-.01em;line-height:1.25;text-shadow:0 1px 8px #0008}
+.system-dialog .system-description{margin:0 0 18px;color:#d9d9e0}
+.system-dialog form{display:grid;gap:7px}
+.system-dialog label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffffb8}
+.system-dialog label span{letter-spacing:.04em;text-transform:none;color:#ffffff80}
+.system-dialog input,.system-dialog textarea{width:100%;min-width:0;padding:9px 11px;border:0;border-bottom:1px solid #ffffff59;border-radius:4px 4px 0 0;background:#ffffff12;
+ color:#fff;font:inherit;font-size:16px;outline:none;transition:background .2s,border-color .2s,box-shadow .2s}
+.system-dialog input:focus,.system-dialog textarea:focus{background:#ffffff1f;border-color:#fff;box-shadow:0 1px 0 #fff,0 6px 22px -6px color-mix(in srgb,var(--dialog-a) 80%,#0000)}
+.system-dialog input[aria-invalid="true"],.system-dialog textarea[aria-invalid="true"]{border-color:#ffaaa0}
+.system-dialog textarea{resize:vertical;min-height:96px;max-height:220px}
+.system-dialog input+label{margin-top:8px}
+.system-dialog textarea::placeholder{color:#ffffff66}
+.system-dialog .memo-error{margin:0;font-size:12px;color:#ffb9ae}
+.system-dialog .memo-handoff{margin:2px 0 0;font-size:12px;color:#ffffff99}
+.system-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #ffffff26}
+.system-actions button{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 7px;border-radius:999px;font-size:14px;color:#ffffffd0;transition:background .15s,color .15s}
+.system-actions button:hover,.system-actions button:focus-visible{background:#ffffff1a;color:#fff}
+.system-actions .memo-submit{color:#fff}
+.system-glyph{display:grid;place-items:center;flex:none;width:20px;height:20px;border:1.5px solid currentColor;border-radius:50%}
+/* Help: one line of controls, then a couple of tips, each beside its icon. */
+.help-controls{margin:0 0 12px;color:#e6e6ea}
+.help-controls b{margin-right:6px;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.help-tips{display:grid;gap:10px;margin:0;padding:0;list-style:none;color:#d9d9e0}
+.help-tips li{display:flex;align-items:center;gap:12px}
+.help-icon{flex:none;width:26px;height:26px}
+@media(max-height:500px){.system-panel{padding:14px 0 10px}.system-dialog .system-description{margin-bottom:10px}.system-dialog textarea{min-height:64px}}
+/* Phones held upright turn the whole page (see .page.phone above), but the dialog opens in the top layer, outside
+   that turn, so it turns the same way by itself. */
+@media(orientation:portrait){
+ .page.phone .system-dialog{left:50%;right:auto;width:100svh;max-height:calc(100vw - 16px);transform:translateX(-50%) rotate(90deg)}
+}
+
+/* Persona 5: a black card thrown across a jagged red band, with Anton headings, white fields and hard red shadows. */
+.page.experience-persona5 .system-dialog{border:0;background:#e5191c;box-shadow:none;clip-path:polygon(0 7%,100% 0,100% 93%,0 100%);
+ font-family:Arial,Helvetica,sans-serif}
+.page.experience-persona5 .system-dialog::backdrop{background:#000000c8}
+.page.experience-persona5 .system-panel{margin:34px auto;padding:20px 24px 16px;background:#0b0b0b;transform:rotate(-1.5deg);box-shadow:7px 7px 0 #f4f1ea}
+.page.experience-persona5 .system-eyebrow{width:max-content;padding:5px 12px;background:#f4f1ea;color:#0b0b0b;font:400 14px/1 Anton,Impact,sans-serif;letter-spacing:.1em;transform:skewX(-12deg)}
+.page.experience-persona5 .system-dialog h2{font:400 34px/1.05 Anton,Impact,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.02em;text-shadow:3px 3px 0 #e5191c}
+.page.experience-persona5 .system-dialog label{font-weight:700;color:#f4f1ea}
+.page.experience-persona5 .system-dialog input,.page.experience-persona5 .system-dialog textarea{border:2px solid #f4f1ea;border-radius:0;background:#f4f1ea;color:#0b0b0b}
+.page.experience-persona5 .system-dialog input:focus,.page.experience-persona5 .system-dialog textarea:focus{background:#fff;border-color:#fff;box-shadow:4px 4px 0 #e5191c}
+.page.experience-persona5 .system-dialog textarea::placeholder{color:#0b0b0b80}
+.page.experience-persona5 .system-actions{border-top-color:#e5191c}
+.page.experience-persona5 .system-actions button{border-radius:0;font:400 17px/1 Anton,Impact,sans-serif;letter-spacing:.06em;text-transform:uppercase;transform:skewX(-10deg)}
+.page.experience-persona5 .system-actions button:hover,.page.experience-persona5 .system-actions button:focus-visible{background:#e5191c}
+
+/* Grand Theft Auto: a dark pause-menu panel between the pink and teal of the theme, with outlined rounded type. */
+.page.experience-gta .system-dialog{border-block:3px solid;border-image:linear-gradient(90deg,#ec6fae,#0b6f8f) 1;
+ background:linear-gradient(90deg,#ec6fae26,#0000 35% 65%,#0b6f8f33),#050608e8;font-family:"Arial Rounded MT Bold","Arial Black",Arial,sans-serif}
+.page.experience-gta .system-eyebrow{font:700 12px/1 "Arial Rounded MT Bold","Arial Black",Arial,sans-serif;letter-spacing:.12em;color:#5fd0e6}
+.page.experience-gta .system-dialog h2{font-size:28px;font-weight:700;color:#ec6fae;-webkit-text-stroke:.16em #000;paint-order:stroke fill;text-shadow:2px 3px 0 #000}
+.page.experience-gta .system-dialog .system-description,.page.experience-gta .system-dialog .memo-handoff{font-family:Arial,sans-serif}
+.page.experience-gta .system-dialog input,.page.experience-gta .system-dialog textarea{border:2px solid #ffffff38;border-radius:2px;background:#000000b0;font-family:Arial,sans-serif}
+.page.experience-gta .system-dialog input:focus,.page.experience-gta .system-dialog textarea:focus{border-color:#ec6fae;box-shadow:0 0 0 2px #ec6fae40}
+.page.experience-gta .system-actions button{border-radius:2px;-webkit-text-stroke:.14em #000;paint-order:stroke fill}
+.page.experience-gta .system-actions button:hover,.page.experience-gta .system-actions button:focus-visible{background:#0b6f8f66}
+
+/* Black Ops II: a tactical readout in condensed capitals, its menu orange on dark scanlines. */
+.page.experience-bo2 .system-dialog{border-block-color:#f47b2066;font-family:"Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;
+ background:repeating-linear-gradient(#0000 0 2px,#ffffff06 2px 3px),linear-gradient(90deg,#0000,#a9d3cf12 30% 70%,#0000),#07090ae8}
+.page.experience-bo2 .system-panel{border-left:3px solid #f47b20;padding-left:16px}
+.page.experience-bo2 .system-eyebrow{font:700 12px/1 "Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;letter-spacing:.24em;color:#f47b20}
+.page.experience-bo2 .system-dialog h2{font-size:24px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.page.experience-bo2 .system-dialog label{color:#a9d3cf}
+.page.experience-bo2 .system-dialog input,.page.experience-bo2 .system-dialog textarea{border:1px solid #a9d3cf40;border-radius:0;background:#ffffff08}
+.page.experience-bo2 .system-dialog input:focus,.page.experience-bo2 .system-dialog textarea:focus{border-color:#f47b20;box-shadow:0 0 12px #f47b2040}
+.page.experience-bo2 .system-actions{border-top-color:#a9d3cf26}
+.page.experience-bo2 .system-actions button{border-radius:0;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.page.experience-bo2 .system-actions button:hover,.page.experience-bo2 .system-actions button:focus-visible{background:none;color:#f47b20;text-shadow:0 0 8px #f47b2080}

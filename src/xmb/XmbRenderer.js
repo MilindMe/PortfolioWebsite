@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import {categories} from './content';
 import {drawIcon} from './icons';
-import {SETTINGS, currentItem, itemSub} from './state';
+import {drawTrophy} from '../trophyArt';
+import {earnedTrophies} from '../trophies';
+import {SETTINGS, currentItem, itemLabel, itemSub} from './state';
 import {themeColors} from './themes';
 import {ROUNDS} from './game';
 
@@ -464,7 +466,7 @@ export class XmbRenderer{
   this.pulses.push({text:label,x:SCREEN_W/2-width/2,y,font:ctx.font,alpha});
   this.noShadow();ctx.fillStyle='rgba(255,255,255,.45)';ctx.fillRect(SCREEN_W/2-60,y+18,120,.6);
   this.shadow(2);ctx.font=`9px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';
-  ctx.fillText('Press ✕ or tap the screen',SCREEN_W/2,y+32);
+  ctx.fillText('Press ✕, ↵ or tap the screen',SCREEN_W/2,y+32);
   this.noShadow();ctx.globalAlpha=1;
   if(interactive)this.hits.push({x:0,y:0,w:SCREEN_W,h:SCREEN_H,action:{type:'CONFIRM'}});
  }
@@ -483,7 +485,8 @@ export class XmbRenderer{
     hit:interactive?(i===state.sub?{type:'CONFIRM'}:{type:'FOCUS',sub:i}):null});
   });
   if(interactive){
-   ctx.globalAlpha=alpha*reveal;this.hint('✕ Apply   ○ Back',true);
+   // Only theme folders have something to apply; Trophies is just for looking.
+   ctx.globalAlpha=alpha*reveal;this.hint(entries.some(entry=>entry.theme)?'✕ Apply   ○ Back':'○ Back',true);
   }
   this.noShadow();ctx.globalAlpha=1;
  }
@@ -493,13 +496,15 @@ export class XmbRenderer{
   ctx.globalAlpha=alpha;
   if(hit&&this.hovering(x-18,y-ROW_H/2,SCREEN_W-x+18,ROW_H))this.glow(x,y,22);
   ctx.strokeStyle=BRIGHT;this.shadow(3);
-  drawIcon(ctx,item.icon,x,y,24*(.7+.3*near));
+  // Trophies are drawn in their own metal, greyed out until earned.
+  if(item.trophy)drawTrophy(ctx,item.grade,x,y,28*(.7+.3*near),!earnedTrophies().has(item.trophy));
+  else drawIcon(ctx,item.icon,x,y,24*(.7+.3*near));
   if(labelAlpha>.01){
    ctx.globalAlpha=alpha*labelAlpha;ctx.textAlign='left';ctx.fillStyle=near>.5?BRIGHT:TEXT;
    ctx.font=this.p5?`${13+2*near}px ${P5_FONT}`:`${this.gta||this.bo2?'bold ':''}${11+near}px ${FONT}`;
    // Persona 5's taller label and its plate (with the plate's offset shadow) need more room above the subtitle.
    const sub=itemSub(this.state,item), lift=this.p5?8:5, labelY=sub?y-lift*near:y, subY=y+(this.p5?3+7*near:8);
-   const label=this.p5?item.label.toUpperCase():item.label;
+   const text=itemLabel(this.state,item), label=this.p5?text.toUpperCase():text;
    if(focused){
     if(this.p5)this.p5Plate(x+20,labelY,ctx.measureText(label).width+14,sub?16:20);
     this.pulses.push({text:label,x:x+26,y:labelY,font:ctx.font,alpha:ctx.globalAlpha,outline:this.gta,color:this.bo2?BO2_ORANGE:undefined});
@@ -599,8 +604,10 @@ export class XmbRenderer{
   if(interactive)this.hits.push({x:SCREEN_W-90,y:248,w:70,h:20,action:{type:'BACK'}});
  }
  photoView(alpha,interactive){
-  const ctx=this.ctx, state=this.state, items=categories[state.cat].items, index=state.item[state.cat], item=items[index];
+  const ctx=this.ctx, state=this.state, items=categories[state.cat].items, item=items[state.item[state.cat]];
   if(!item.photo)return;
+  // Only the photos count: items like Leave a memo share the column but the photo view steps past them.
+  const photos=items.filter(entry=>entry.photo), place=photos.indexOf(item);
   ctx.globalAlpha=alpha;ctx.fillStyle='rgba(0,0,0,.92)';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
   const entry=this.photo(item.photo), area={x:20,y:10,w:SCREEN_W-40,h:224};
   if(entry.ok){
@@ -613,12 +620,12 @@ export class XmbRenderer{
   }
   ctx.font=`11px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=BRIGHT;this.shadow(2);
   ctx.fillText(item.caption??item.label,SCREEN_W/2,248);
-  ctx.font=`9px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='left';ctx.fillText(`${index+1} / ${items.length}`,28,258);
-  if(items.length>1){ctx.font=`20px ${FONT}`;ctx.textAlign='center';ctx.fillText('‹',10,area.y+area.h/2);ctx.fillText('›',SCREEN_W-10,area.y+area.h/2);}
+  ctx.font=`9px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='left';ctx.fillText(`${place+1} / ${photos.length}`,28,258);
+  if(photos.length>1){ctx.font=`20px ${FONT}`;ctx.textAlign='center';ctx.fillText('‹',10,area.y+area.h/2);ctx.fillText('›',SCREEN_W-10,area.y+area.h/2);}
   this.noShadow();
   if(interactive){
    this.hits.push({x:0,y:0,w:SCREEN_W,h:SCREEN_H,action:{type:'BACK'}});
-   if(items.length>1)this.hits.push({x:0,y:0,w:70,h:SCREEN_H-30,action:{type:'LEFT'}},{x:SCREEN_W-70,y:0,w:70,h:SCREEN_H-30,action:{type:'RIGHT'}});
+   if(photos.length>1)this.hits.push({x:0,y:0,w:70,h:SCREEN_H-30,action:{type:'LEFT'}},{x:SCREEN_W-70,y:0,w:70,h:SCREEN_H-30,action:{type:'RIGHT'}});
   }
   this.hint('○ Back',interactive);
   ctx.globalAlpha=1;

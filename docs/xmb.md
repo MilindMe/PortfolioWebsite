@@ -13,11 +13,13 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 | `src/xmb/content.js` | **All the content.** Categories, items, project write-ups, links, photo captions. Start here to edit the site. |
 | `src/features.js` | Hard-coded feature flags. `bo2Theme` (on) offers the basic Black Ops II theme; `bo2ThemeAdvanced` (off) adds its HUD and Main Menu. |
 | `src/xmb/themes.js` | Themes (Crimson is the default), the page `experiences` they belong to, `themeColors()`, `themeExperience()`, and saving the chosen theme to `localStorage`. |
-| `src/xmb/state.js` | The navigation reducer (`xmbReducer`), its initial state (`initialXmb`), and `xmbLink`, which decides when an action opens a URL. |
+| `src/xmb/state.js` | The navigation reducer (`xmbReducer`), its initial state (`initialXmb`), `xmbLink`, which decides when an action opens a URL, and `xmbOpensMemo`, which decides when one opens the Leave a memo dialog. |
 | `src/xmb/XmbRenderer.js` | Draws the whole OS into an offscreen canvas that becomes the screen's texture. Owns animation, layout constants and hit boxes. |
 | `src/xmb/input.js` | Keyboard mapping (`keyAction`) and pointer handling on the 3D model (`attachScreenInput`): taps, swipes, PSP buttons. |
 | `src/xmb/icons.js` | Lucide icon outlines (ISC licence) stroked onto the canvas with `drawIcon`. |
 | `src/xmb/buttonGlow.js` | Thin glows traced from each live PSP button's own outline, brighter on hover. |
+| `src/Help.jsx` | The ? in the bottom-right corner and its help card, a system dialog like Leave a memo. |
+| `src/trophyArt.js`, `src/TrophyIcon.jsx` | PlayStation-style trophy art: `drawTrophy` for Settings → Trophies on the canvas, `TrophyIcon` for the banner and Help. |
 | `src/QuickLinks.jsx` | GitHub, LinkedIn and résumé icons in the top-right corner, styled per experience. |
 | `src/LoadingScreen.jsx` | The boot screen: the XMB ribbon across the middle and "Loading" beneath. |
 | `src/xmb/XmbA11y.jsx` | Hidden semantic HTML copy of the content, plus a live region announcing the focused item. |
@@ -59,7 +61,7 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 {cat, item: [focused index per category], view: 'menu' | 'detail' | 'photo' | 'folder' | 'game', sub, scroll, link, theme, started, unlocked}
 ```
 
-- **Start screen**: every visit starts with `started: false`. The screen shows only its backdrop (in the saved theme's colours), the status bar and a pulsing **START**, with "Press Start" under the PSP. Only `CONFIRM` does anything (✕, Enter, or a tap anywhere on the screen, which is one big hit box); it sets `started` and plays `ok`. START fades out first, then Settings fades in, using the same staged reveal as folders.
+- **Start screen**: every visit starts with `started: false`. The screen shows only its backdrop (in the saved theme's colours), the status bar and a pulsing **START**, with "Press ✕, ↵ or tap the screen" beneath it and "Tap Start to Begin" under the PSP. Only `CONFIRM` does anything (✕, Enter, or a tap anywhere on the screen, which is one big hit box); it sets `started` and plays `ok`. START fades out first, then Settings fades in, using the same staged reveal as folders.
 - **Theme first**: after Start, the visit is `unlocked: false` on **Settings**, on Crimson (`DEFAULT_THEME`), focused inside the Classics folder. While locked, only Settings is drawn and nothing can leave it. Applying any theme sets `unlocked`, the other categories fade in, and `App.jsx` moves to **About** (`START`) once any transition has played. Until then the page shows "Select a theme first" under the PSP, in Michroma (self-hosted, a wide geometric face like the PlayStation wordmark), and the layout is always Classic.
 - `view: 'folder'` lists a folder item's entries (`item.folder`), with `sub` the focused one. The column slides left, keeping just the folder icon, and the entries open to its right like a PSP folder. Parent labels fade first; the sublist begins appearing about 85 ms into opening. The stages follow animation progress, so reversing midway stays clean. Item subtitles and adjacent category columns also fade out before their replacements appear; reduced motion switches immediately. `LEFT`/`BACK` or tapping the folder icon closes it.
 
@@ -327,7 +329,7 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 - The PSP's D-pad, ✕ and ○ work.
 - Links open in a new tab.
 - With rotation locked, dragging and Shift+arrows do nothing.
-- The PSP loads centred at about 80% of the page with no wheel, on the Start screen with "Press Start" underneath. Arrows and scrolling do nothing; ✕, Enter or a tap shows Settings only, with "Select a theme first" underneath. Left/right and scrolling can't leave Settings.
+- The PSP loads centred at about 80% of the page with no wheel, on the Start screen with "Tap Start to Begin" underneath. Arrows and scrolling do nothing; ✕, Enter or a tap shows Settings only, with "Select a theme first" underneath. Left/right and scrolling can't leave Settings.
 - Classics opens as a folder of the colour themes. Picking any theme fades in the other categories and moves to About; scrolling then walks down the items and on into the next category.
 - The screen is red by default. Picking a Classic theme fades the backdrop to it. Reloading always starts back on red Crimson, whatever theme was picked.
 - Picking Persona 5 shakes, flips and shrinks the PSP, plays the calling card, swings the wheel in and turns the page and screen red and black. Picking a Classic theme flips it back.

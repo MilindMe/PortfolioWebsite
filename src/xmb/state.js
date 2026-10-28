@@ -1,6 +1,7 @@
 import {categories} from './content';
 import {DEFAULT_THEME} from './themes';
 import {gameReducer, gameSound, newGame} from './game';
+import {earnedTrophies, trophies} from '../trophies';
 
 export const SETTINGS=categories.findIndex(category=>category.id==='settings');
 // Where the visitor lands once they have picked a theme.
@@ -44,6 +45,12 @@ function withItem(state,index){
  return {...state,item};
 }
 
+// The next item along that has a photo, wrapping round, so the photo view steps past items like Leave a memo.
+function nextPhoto(items,from,step){
+ for(let i=1;i<=items.length;i++){const index=(from+step*i+items.length*i)%items.length;if(items[index].photo)return index;}
+ return from;
+}
+
 const applyTheme=(state,theme)=>({...state,theme,unlocked:true});
 
 // Actions: LEFT RIGHT UP DOWN CONFIRM BACK, FOCUS {cat, item?} (or {sub} in a folder) from taps on the screen and
@@ -82,8 +89,8 @@ export function xmbReducer(state,action){
  }
  if(state.view==='photo'){
   switch(action.type){
-   case 'LEFT':case 'UP':case 'PREV':return withItem(state,(focused-1+items.length)%items.length);
-   case 'RIGHT':case 'DOWN':case 'NEXT':return withItem(state,(focused+1)%items.length);
+   case 'LEFT':case 'UP':case 'PREV':return withItem(state,nextPhoto(items,focused,-1));
+   case 'RIGHT':case 'DOWN':case 'NEXT':return withItem(state,nextPhoto(items,focused,1));
    case 'BACK':case 'CONFIRM':return {...state,view:'menu'};
    default:return state;
   }
@@ -129,8 +136,21 @@ export function xmbReducer(state,action){
  }
 }
 
+// Hidden trophies keep their name and what earns them to themselves until they are earned.
+const unearnedHidden=item=>item.hidden&&!earnedTrophies().has(item.trophy);
+export const HIDDEN_TROPHY='Hidden Trophy';
+
+// The label shown for an item: its own, except a hidden trophy not yet earned.
+export function itemLabel(state,item){
+ return unearnedHidden(item)?HIDDEN_TROPHY:item.label;
+}
+
 // The subtitle shown for an item; theme items say whether they're in use, and a folder names the one it holds.
+// Trophies counts what has been collected, and each trophy in it says what earns it, ticked once earned.
 export function itemSub(state,item){
+ if(item.trophies){const earned=earnedTrophies(), ids=Object.keys(trophies);return `${ids.filter(id=>earned.has(id)).length} / ${ids.length} collected`;}
+ if(unearnedHidden(item))return 'Keep exploring to find this one.';
+ if(item.trophy)return `${earnedTrophies().has(item.trophy)?'✓ ':''}${trophies[item.trophy].description}`;
  if(item.theme)return item.theme===state.theme?'✓ In use':item.sub??'Select to apply';
  const active=item.folder?.find(entry=>entry.theme===state.theme);
  return active?`✓ ${active.label} in use`:item.sub;
@@ -159,13 +179,19 @@ export function xmbLink(state,action){
  if(action.type!=='CONFIRM'||!state.started)return null;
  const item=currentItem(state);
  if(state.view==='detail')return item.detail.links?.[action.link??state.link]?.url??null;
- if(state.view==='menu'&&!item.detail&&!item.photo&&!item.theme&&!item.folder&&!item.game)return item.link??null;
+ if(state.view==='menu'&&!item.detail&&!item.photo&&!item.theme&&!item.folder&&!item.game&&!item.memo)return item.link??null;
  return null;
+}
+
+// Whether an action opens the Leave a memo dialog: ✕ on a memo item in the menu. Like xmbLink, App checks this
+// before dispatching, so the dialog opens inside the user's gesture.
+export function xmbOpensMemo(state,action){
+ return action.type==='CONFIRM'&&state.started&&state.unlocked&&state.view==='menu'&&!!currentItem(state).memo;
 }
 
 // The menu sound an action makes (see sound.js), or null when nothing changed, e.g. pressing up at the top of a list.
 // Starting, opening a page, folder or photo and applying a theme say ok, closing one says cancel, and moving the cursor says
-// up or down by direction. opened is whether the action opened a link.
+// up or down by direction. opened is whether the action opened a link or a dialog.
 export function xmbSound(previous,next,action,opened=false){
  if(previous.view==='game'&&next.view==='game')return gameSound(previous.game,next.game);
  if(opened||next.theme!==previous.theme||next.started!==previous.started)return 'ok';

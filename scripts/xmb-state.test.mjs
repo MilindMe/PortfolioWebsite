@@ -7,7 +7,7 @@ const entry=`export * from ${JSON.stringify(new URL('../src/xmb/state.js',import
 const bundle=await build({configFile:false,logLevel:'silent',plugins:[{name:'entry',resolveId:id=>id==='entry'?'\0entry':null,load:id=>id==='\0entry'?entry:null}],
  build:{write:false,minify:false,rollupOptions:{input:'entry',preserveEntrySignatures:'strict',output:{format:'es'}}}});
 const output=(Array.isArray(bundle)?bundle:[bundle]).flatMap(result=>result.output);
-const {xmbReducer,initialXmb,itemSub,readingFocus,trophiesFor,xmbSound,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
+const {xmbReducer,initialXmb,itemLabel,itemSub,readingFocus,trophiesFor,xmbLink,xmbOpensMemo,xmbSound,SETTINGS,START,categories}=await import(`data:text/javascript;base64,${Buffer.from(output.find(file=>file.type==='chunk').code).toString('base64')}`);
 
 const last=categories.length-1;
 const menu=(cat,item)=>({cat,item:categories.map((category,i)=>i===cat?item:0),view:'menu',sub:0,scroll:0,link:0,theme:'crimson',started:true,unlocked:true});
@@ -39,12 +39,35 @@ test('NEXT and PREV scroll a detail page within its limit',()=>{
  assert.equal(xmbReducer(detail,{type:'PREV'}).scroll,0);
 });
 
-test('NEXT and PREV step through photos without leaving the category',()=>{
- const cat=categories.findIndex(category=>category.items.some(item=>item.photo)), count=categories[cat].items.length;
- const photo={...menu(cat,0),view:'photo'};
+test('NEXT and PREV step through photos without leaving the category, skipping items that aren\'t photos',()=>{
+ const cat=categories.findIndex(category=>category.items.some(item=>item.photo)), items=categories[cat].items;
+ const photos=items.flatMap((item,i)=>item.photo?[i]:[]);
+ const photo={...menu(cat,photos[0]),view:'photo'};
  const next=xmbReducer(photo,{type:'NEXT'});
- assert.deepEqual(focus(next),[cat,1%count]);assert.equal(next.view,'photo');
- assert.deepEqual(focus(xmbReducer(photo,{type:'PREV'})),[cat,count-1]);
+ assert.deepEqual(focus(next),[cat,photos[1%photos.length]]);assert.equal(next.view,'photo');
+ assert.deepEqual(focus(xmbReducer(photo,{type:'PREV'})),[cat,photos.at(-1)]);
+ // A made-up category of a photo, a memo item and another photo steps straight between the photos.
+ const mixed=[{photo:'/a.webp'},{memo:true},{photo:'/b.webp'}];
+ const saved=categories[cat].items;categories[cat].items=mixed;
+ try{
+  assert.deepEqual(focus(xmbReducer({...menu(cat,0),view:'photo'},{type:'NEXT'})),[cat,2]);
+  assert.deepEqual(focus(xmbReducer({...menu(cat,2),view:'photo'},{type:'NEXT'})),[cat,0]);
+  assert.deepEqual(focus(xmbReducer({...menu(cat,0),view:'photo'},{type:'PREV'})),[cat,2]);
+ }finally{categories[cat].items=saved;}
+});
+
+test('✕ on Memories\' Leave a memo item opens the memo dialog, and nothing else does',()=>{
+ const cat=categories.findIndex(category=>category.id==='memories'), item=categories[cat].items.findIndex(item=>item.memo);
+ assert(item>=0,'Memories has a Leave a memo item');
+ const on=menu(cat,item), confirm={type:'CONFIRM'};
+ assert(xmbOpensMemo(on,confirm));
+ // The menu stays where it is underneath, and it isn't a link.
+ assert.equal(xmbReducer(on,confirm),on);assert.equal(xmbLink(on,confirm),null);
+ assert(!xmbOpensMemo(on,{type:'DOWN'}));
+ assert(!xmbOpensMemo({...on,unlocked:false},confirm));
+ assert(!xmbOpensMemo({...on,started:false},confirm));
+ assert(!xmbOpensMemo(menu(cat,item===0?1:0),confirm));
+ assert.equal(xmbSound(on,xmbReducer(on,confirm),confirm,true),'ok');
 });
 
 const settings=categories[SETTINGS].items, classics=settings.findIndex(item=>item.folder), persona5=settings.findIndex(item=>item.theme==='persona5');
@@ -149,4 +172,45 @@ test('trophies: opening About pages and projects, playing Button Rush and switch
  assert.deepEqual(trophiesFor(first,picked),[],'the first theme is not a switch');
  assert.deepEqual(trophiesFor(picked,{...picked,theme:'gta'}),['new-theme']);
  assert.equal(about.length>0,true);
+});
+
+test('Settings ends with Trophies: every trophy, platinum first, counted and ticked as they are earned',()=>{
+ const folder=settings.at(-1);
+ assert.equal(folder.id,'trophies');
+ assert.equal(folder.folder[0].grade,'platinum');
+ const store=new Map();
+ globalThis.localStorage={getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,String(value))};
+ try{
+  const total=folder.folder.length, about=folder.folder.find(entry=>entry.trophy==='about-me');
+  assert.equal(itemSub(begun(),folder),`0 / ${total} collected`);
+  assert(!itemSub(begun(),about).startsWith('✓'));
+  // Unknown ids left over in storage don't count.
+  store.set('trophies-earned',JSON.stringify(['about-me','retired-trophy']));
+  assert.equal(itemSub(begun(),folder),`1 / ${total} collected`);
+  assert(itemSub(begun(),about).startsWith('✓ '));
+ }finally{delete globalThis.localStorage;}
+ // Opening it lists the trophies; ✕ on one changes nothing, and ○ closes it.
+ const open=xmbReducer({...begun(),item:begun().item.map((item,i)=>i===SETTINGS?settings.length-1:item),unlocked:true},{type:'CONFIRM'});
+ assert.equal(open.view,'folder');
+ assert.equal(xmbReducer(open,{type:'CONFIRM'}),open);
+ assert.equal(xmbReducer(open,{type:'BACK'}).view,'menu');
+});
+
+test('hidden trophies keep their name and what earns them secret until earned',()=>{
+ const entries=settings.at(-1).folder, hidden=entries.filter(entry=>entry.hidden);
+ assert(hidden.length>0&&hidden.length<entries.length,'some trophies are hidden, not all');
+ assert(!entries[0].hidden,'the platinum stays visible as the goal');
+ const store=new Map();
+ globalThis.localStorage={getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,String(value))};
+ try{
+  const entry=hidden[0];
+  assert.equal(itemLabel(begun(),entry),'Hidden Trophy');
+  assert(!itemSub(begun(),entry).includes(entry.label));
+  store.set('trophies-earned',JSON.stringify([entry.trophy]));
+  assert.equal(itemLabel(begun(),entry),entry.label);
+  assert(itemSub(begun(),entry).startsWith('✓ '));
+  const shown=entries.find(entry=>!entry.hidden&&entry.grade!=='platinum');
+  store.clear();
+  assert.equal(itemLabel(begun(),shown),shown.label);
+ }finally{delete globalThis.localStorage;}
 });
