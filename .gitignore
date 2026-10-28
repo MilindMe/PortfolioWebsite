@@ -2,3 +2,6 @@ node_modules/
 dist/
 .DS_Store
 *.local
+
+# XMB PS3 sound pack as downloaded; the sounds the site uses live in public/sounds.
+/sounds/

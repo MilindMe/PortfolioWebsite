@@ -4,7 +4,7 @@ import {currentItem} from './xmb/state';
 import {themeColors} from './xmb/themes';
 import {useWheelBox} from './useWheelBox';
 
-export const views={menu:'Browsing',folder:'Browsing',detail:'Reading',photo:'Viewing'};
+export const views={menu:'Browsing',folder:'Browsing',detail:'Reading',photo:'Viewing',game:'Playing'};
 // A Persona 5–style half wheel of the XMB's pages, pinned to the left edge. It spins the current page to the
 // pointer and pops it; the tag underneath follows the focused item. Clicking a page jumps the PSP there.
 // It swings in from the left edge when it mounts, after delay ms.
