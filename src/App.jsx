@@ -9,6 +9,7 @@ import {gameDue, roundPay, withClock} from './xmb/game';
 import {experiences, themeColors, themeExperience} from './xmb/themes';
 import PageWheel from './PageWheel';
 import QuickLinks from './QuickLinks';
+import LeaveMemo from './LeaveMemo';
 import {PHONE, ROTATION_LOCKED} from './layout';
 import PhoneNotice from './PhoneNotice';
 import TrophyToast from './TrophyToast';
@@ -199,6 +200,7 @@ export default function App() {
         {experience.id === 'gta' ? <img className="site-name-art" src={GTA_NAME} alt="Milind Meetarbhan" /> : 'Milind Meetarbhan'}
       </button>
       <QuickLinks />
+      {xmb.unlocked && categories[xmb.cat].id==='memories' && <LeaveMemo />}
       <p key={nudge} className={`theme-prompt${xmb.unlocked ? ' done' : ''}${nudge ? ' nudge' : ''}`} aria-hidden="true">{xmb.started ? 'Select a theme first' : 'Press Start'}</p>
       <XmbA11y state={xmb} />
       {status === 'error' && <button className="scene-status retry" onClick={retry} aria-label="Unable to load the PSP. Retry" title="Unable to load the PSP. Retry"><RefreshCw size={24} /></button>}

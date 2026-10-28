@@ -49,12 +49,12 @@ for obj in meshes:
         material.use_backface_culling = True
         obj.data.materials.clear()
         obj.data.materials.append(material)
-    elif not obj.name.startswith("button"):
-        # Buttons are left whole: a few hundred triangles each, and decimating them bends their printed labels. The
-        # body gives up a little more instead (0.6 rather than 0.66), keeping the model inside check-model's
-        # 40k triangle budget.
+    elif not obj.name.startswith("button") and obj.name != "toppart_low":
+        # Keep buttons and the printed front shell whole: collapsing the latter
+        # stretches the PSP logo's UVs. Reduce the remaining body parts instead
+        # to keep the complete model inside check-model's 40k triangle budget.
         modifier = obj.modifiers.new("Preserve silhouette", "DECIMATE")
-        modifier.ratio = 0.6
+        modifier.ratio = 0.47
         modifier.use_collapse_triangulate = True
         bpy.ops.object.modifier_apply(modifier=modifier.name)
 for material in bpy.data.materials:

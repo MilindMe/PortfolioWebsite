@@ -17,13 +17,21 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
 const bytes = new Uint8Array(await readFile(url));
 const document = await io.readBinary(bytes);
 const root = document.getRoot();
-// △ (5), □ (8), SELECT (14) and START (15) are separate in models built by the current prepare-model.py; older models
-// merged them into the body, and the page then adds stand-ins for △, □ and START.
-const names = ['body_low', 'screen_low', ...[1, 2, 3, 4, 6, 7, 9].map(i => `button${i}_low`)];
-const optional = [5, 8, 14, 15].map(i => `button${i}_low`);
-const nodes = root.listNodes().filter(node => node.getMesh()), found = nodes.map(node => node.getName());
-assert(names.every(name => found.includes(name)), `Missing meshes: ${names.filter(name => !found.includes(name))}`);
-assert(found.every(name => names.includes(name) || optional.includes(name)), `Unexpected meshes: ${found.filter(name => !names.includes(name) && !optional.includes(name))}`);
+// Every interactive button and both printed SELECT/START labels must survive as real meshes.
+const buttons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15].map(i => `button${i}_low`);
+const names = ['body_low', 'screen_low', ...buttons];
+const nodes = root.listNodes().filter(node => node.getMesh());
+assert.deepEqual(nodes.map(node => node.getName()).sort(), names.sort(), 'Missing or unexpected PSP meshes');
+// Button decimation bends the atlas lettering. Compare with the untouched source,
+// including SELECT and START, rather than letting a future rebuild silently regress.
+const source = await io.readBinary(new Uint8Array(await readFile(new URL('../assets-src/psp.glb', import.meta.url))));
+const triangleCount = node => node.getMesh().listPrimitives()
+  .reduce((total, primitive) => total + primitive.getIndices().getCount() / 3, 0);
+for (const name of buttons) {
+  assert.equal(triangleCount(nodes.find(node => node.getName() === name)),
+    triangleCount(source.getRoot().listNodes().find(node => node.getName() === name)),
+    `Button was decimated: ${name}`);
+}
 assert(root.listMaterials().every(material => !material.getDoubleSided()));
 assert.equal(root.listTextures().length, 4);
 assert(root.listTextures().every(texture => texture.getMimeType() === 'image/ktx2'));

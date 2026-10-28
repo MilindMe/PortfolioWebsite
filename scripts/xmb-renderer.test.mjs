@@ -13,10 +13,10 @@ const {XmbRenderer,layoutPage}=await import(`data:text/javascript;base64,${Buffe
 
 function canvas(){
  const canvas={width:0,height:0};
- const ctx=new Proxy({canvas,events:[],globalAlpha:1,
-  clearRect(){this.events=[];},
-  fillText(text){this.events.push(text);},
-  drawImage(source){this.events.push(...source.getContext('2d').events);},
+ const ctx=new Proxy({canvas,events:[],paints:[],globalAlpha:1,
+  clearRect(){this.events=[];this.paints=[];},
+  fillText(text){this.events.push(text);this.paints.push({text,alpha:this.globalAlpha,font:this.font});},
+  drawImage(source){const layer=source.getContext('2d');this.events.push(...layer.events);this.paints.push(...(layer.paints??[]).map(p=>({...p,alpha:p.alpha*this.globalAlpha})));},
   measureText(text){return {width:text.length*6};},
   createLinearGradient(){return {addColorStop(){}};},
   createRadialGradient(){return {addColorStop(){}};},
@@ -207,5 +207,97 @@ test('Education draws the seal once it loads',async t=>{
  xmb.out.events=[];xmb.draw(2,99,true);
  assert(xmb.out.events.includes('UNIVERSITY OF WATERLOO'),JSON.stringify(xmb.out.events));
  assert(xmb.out.events.includes('IMG /education/uw-seal.webp'),JSON.stringify(xmb.out.events));
+ xmb.dispose();
+});
+
+
+for(const hz of [60,144])test(`folder labels clear before the sublist appears, including reversal (${hz} Hz)`,t=>{
+ const {xmb,state}=renderer(t);let now=2000,paints=[];
+ const tick=()=>{xmb.out.paints=[];const drawn=xmb.tick(now);if(drawn)paints=xmb.out.paints;return drawn;};
+ const menu={...state,cat:5,unlocked:false};
+ xmb.shown.cat=5;xmb.shown.reveal=0;xmb.setState(menu);tick();
+ const opacity=label=>Math.max(0,...paints.filter(p=>p.text.toUpperCase()===label).map(p=>p.alpha));
+ const run=ms=>{for(const end=now+ms;now<end;){
+  now+=1000/hz;const drawn=tick();
+  assert(!(opacity('CLASSICS')>.01&&opacity('CRIMSON')>.01),`overlapping folder labels at ${now} ms`);
+  if(drawn&&xmb.state.view==='folder'&&xmb.shown.folder<=.7)assert(!xmb.hits.some(hit=>hit.action.type==='CONFIRM'||hit.action.sub!==undefined),'hidden sublist entries must not be clickable');
+ }};
+ xmb.setState({...menu,view:'folder'});run(600);
+ assert.equal(xmb.shown.folder,1);assert(opacity('CRIMSON')>.9);assert.equal(opacity('CLASSICS'),0);
+ xmb.setState(menu);run(600);
+ assert.equal(xmb.shown.folder,0);assert(opacity('CLASSICS')>.9);assert.equal(opacity('CRIMSON'),0);
+ // Closing and immediately reopening must use the current animation position.
+ xmb.setState({...menu,view:'folder'});run(50);xmb.setState(menu);run(25);
+ xmb.setState({...menu,view:'folder'});run(600);
+ assert.equal(xmb.shown.folder,1);assert(opacity('CRIMSON')>.9);
+ xmb.dispose();
+});
+
+for(const hz of [60,144])test(`outgoing subtitles clear before the next item's subtitle appears (${hz} Hz)`,t=>{
+ const {xmb,state}=renderer(t);let now=2000,paints=[];
+ const tick=()=>{xmb.out.paints=[];const drawn=xmb.tick(now);if(drawn)paints=xmb.out.paints;return drawn;};
+ xmb.setState(state);tick();
+ const subtitles=()=>[...new Set(paints.filter(p=>p.font?.startsWith('8.5px')&&p.alpha>.01).map(p=>p.text))];
+ const first=subtitles();assert.equal(first.length,1);
+ const next={...state,item:state.item.map((value,i)=>i===0?1:value)};
+ const run=ms=>{for(const end=now+ms;now<end;){
+  now+=1000/hz;tick();
+  assert(subtitles().length<=1,`overlapping subtitles at ${now} ms: ${subtitles()}`);
+ }};
+ xmb.setState(next);run(600);assert.equal(subtitles().length,1);assert.notDeepEqual(subtitles(),first);
+ xmb.setState(state);run(600);assert.deepEqual(subtitles(),first);
+ xmb.setState(next);run(50);xmb.setState(state);run(600);assert.deepEqual(subtitles(),first);
+ xmb.dispose();
+});
+
+test('reduced motion switches folder labels and subtitles immediately',t=>{
+ const {xmb,state}=renderer(t,true);let now=2000;
+ const menu={...state,cat:5,unlocked:false};
+ for(const view of ['menu','folder','menu']){
+  xmb.setState({...menu,view});xmb.out.paints=[];xmb.tick(now+=33);
+  const visible=xmb.out.paints.filter(p=>p.alpha>.01).map(p=>p.text);
+  assert.equal(visible.includes('Classics'),view==='menu');
+  assert.equal(visible.includes('Crimson'),view==='folder');
+ }
+ xmb.dispose();
+});
+
+
+for(const hz of [60,144])test(`category changes do not overlap item-column subtitles (${hz} Hz)`,t=>{
+ const {xmb,state}=renderer(t);let now=2000,paints=[];
+ const tick=()=>{xmb.out.paints=[];const drawn=xmb.tick(now);if(drawn)paints=xmb.out.paints;return drawn;};
+ xmb.shown.reveal=1;xmb.setState(state);tick();
+ const subtitles=()=>[...new Set(paints.filter(p=>p.font?.startsWith('8.5px')&&p.alpha>.01).map(p=>p.text))];
+ const first=subtitles();assert.equal(first.length,1);
+ const run=ms=>{for(const end=now+ms;now<end;){now+=1000/hz;tick();assert(subtitles().length<=1,`overlapping column subtitles: ${subtitles()}`);}};
+ xmb.setState({...state,cat:1});run(600);assert.equal(subtitles().length,1);assert.notDeepEqual(subtitles(),first);
+ xmb.setState(state);run(600);assert.deepEqual(subtitles(),first);
+ xmb.dispose();
+});
+
+
+for(const hz of [60,144])test(`START clears before Settings appears (${hz} Hz)`,t=>{
+ const {xmb,state}=renderer(t);let now=2000,paints=[];
+ const tick=()=>{xmb.out.paints=[];if(xmb.tick(now))paints=xmb.out.paints;};
+ const start={...state,cat:5,started:false,unlocked:false};
+ xmb.shown.cat=5;xmb.shown.start=1;xmb.shown.reveal=0;xmb.setState(start);tick();
+ const opacity=label=>Math.max(0,...paints.filter(p=>p.text===label).map(p=>p.alpha));
+ assert(opacity('START')>.9);assert.equal(opacity('Settings'),0);
+ xmb.setState({...start,started:true});
+ for(const end=now+600;now<end;){
+  now+=1000/hz;tick();
+  assert(!(opacity('START')>.01&&opacity('Settings')>.01),`START and Settings overlap at ${now} ms`);
+ }
+ assert.equal(opacity('START'),0);assert(opacity('Settings')>.9);
+ xmb.dispose();
+});
+
+test('reduced motion replaces START with Settings immediately',t=>{
+ const {xmb,state}=renderer(t,true);
+ const start={...state,cat:5,started:false,unlocked:false};
+ xmb.shown.start=1;xmb.setState(start);xmb.tick(2000);
+ xmb.setState({...start,started:true});xmb.out.paints=[];xmb.tick(2033);
+ const visible=xmb.out.paints.filter(p=>p.alpha>.01).map(p=>p.text);
+ assert(!visible.includes('START'));assert(visible.includes('Settings'));
  xmb.dispose();
 });

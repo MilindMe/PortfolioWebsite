@@ -150,7 +150,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   // Scrolling anywhere on the page walks the menu (NEXT/PREV), once the PSP is on screen.
   let wheelTotal=0, wheelAt=0, stepAt=0;
   function wheel(e){
-   if(!input||e.ctrlKey)return;
+   if(!input||e.ctrlKey||document.querySelector('dialog[open]'))return;
    e.preventDefault();
    const now=performance.now();
    if(now-wheelAt>WHEEL_RESET)wheelTotal=0;

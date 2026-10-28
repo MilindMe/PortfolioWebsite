@@ -63,6 +63,6 @@ npm test
 npm run build
 ```
 
-The cleanup preserves the source file and all interactive mesh names, reduces 58,200 triangles to 39,980, joins the static body, recalculates normals, enables backface culling, and bakes the screen UVs. The shipped model has 9 meshes, weighs 563 KB (467 KB gzip), and uses four KTX2 textures with about 2.6 MB estimated minimum GPU allocation. The previous JPEG model was 651 KB (410 KB gzip); KTX2 also needs a one-time Basis transcoder download, trading additional cold-load bytes for much lower GPU memory and fewer draw calls.
+The cleanup preserves the source file and all interactive mesh names, reduces 58,200 triangles to 39,590, joins the static body, recalculates normals, enables backface culling, and bakes the screen UVs. The printed front shell and all buttons remain undecimated, with △, □, SELECT and START kept separate to preserve their labels and real click targets. The shipped model has 13 meshes, weighs 559 KB (453 KB gzip), and uses four KTX2 textures with about 2.6 MB estimated minimum GPU allocation. The previous JPEG model was 651 KB (410 KB gzip); KTX2 also needs a one-time Basis transcoder download, trading additional cold-load bytes for much lower GPU memory and fewer draw calls.
 
 The shell starts one shared model fetch alongside the lazy scene import. This avoids duplicate HTML fetch preloads in WebKit. See [`docs/perf-followups.md`](docs/perf-followups.md) for browser validation and remaining physical-device checks.

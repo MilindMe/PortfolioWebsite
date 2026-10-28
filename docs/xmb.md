@@ -59,9 +59,9 @@ This document explains where the OS lives, how a frame reaches the screen, and h
 {cat, item: [focused index per category], view: 'menu' | 'detail' | 'photo' | 'folder' | 'game', sub, scroll, link, theme, started, unlocked}
 ```
 
-- **Start screen**: every visit starts with `started: false`. The screen shows only its backdrop (in the saved theme's colours), the status bar and a pulsing **START**, with "Press Start" under the PSP. Only `CONFIRM` does anything (✕, Enter, or a tap anywhere on the screen, which is one big hit box); it sets `started`, plays `ok`, and the Settings menu fades in.
+- **Start screen**: every visit starts with `started: false`. The screen shows only its backdrop (in the saved theme's colours), the status bar and a pulsing **START**, with "Press Start" under the PSP. Only `CONFIRM` does anything (✕, Enter, or a tap anywhere on the screen, which is one big hit box); it sets `started` and plays `ok`. START fades out first, then Settings fades in, using the same staged reveal as folders.
 - **Theme first**: after Start, the visit is `unlocked: false` on **Settings**, on Crimson (`DEFAULT_THEME`), focused inside the Classics folder. While locked, only Settings is drawn and nothing can leave it. Applying any theme sets `unlocked`, the other categories fade in, and `App.jsx` moves to **About** (`START`) once any transition has played. Until then the page shows "Select a theme first" under the PSP, in Michroma (self-hosted, a wide geometric face like the PlayStation wordmark), and the layout is always Classic.
-- `view: 'folder'` lists a folder item's entries (`item.folder`), with `sub` the focused one. The column slides left, keeping just the folder icon, and the entries open to its right like a PSP folder. `LEFT`/`BACK` or tapping the folder icon closes it.
+- `view: 'folder'` lists a folder item's entries (`item.folder`), with `sub` the focused one. The column slides left, keeping just the folder icon, and the entries open to its right like a PSP folder. Parent labels fade first; the sublist begins appearing about 85 ms into opening. The stages follow animation progress, so reversing midway stays clean. Item subtitles and adjacent category columns also fade out before their replacements appear; reduced motion switches immediately. `LEFT`/`BACK` or tapping the folder icon closes it.
 
 - `item` remembers the focused item in **every** category, so going left and right returns you to where you were, like the real XMB.
 - `view: 'detail'` shows an item's `detail` write-up. `scroll` is in steps of two lines. `link` is the selected link button.
@@ -304,28 +304,14 @@ A Persona 5–inspired half wheel pinned to the left edge (or the top, on narrow
 
 ## The model pipeline
 
-> **Pending rebuild.** `scripts/prepare-model.py` has changed since `public/models/psp-v3.glb` was built: △, □, SELECT
-> and START are now kept as separate, undecimated meshes, no button is decimated (that was warping the printed SELECT
-> and START labels), and the body is decimated to 0.6 instead of 0.66 to stay under the 40k triangle budget (about
-> 39,600 expected). The shipped model predates this, so the page still uses stand-ins for △, □ and START. To apply it:
->
-> 1. Install Blender and KTX-Software 4.4+ (`brew install --cask blender` and the KTX release from
->    https://github.com/KhronosGroup/KTX-Software/releases, so `ktx` is on PATH).
-> 2. `npm run model:optimize`: rebuilds `public/models/psp-v3.glb` and runs the model check before replacing it.
-> 3. `npm run model:check`: confirm the triangle count (≤ 40,000) and file size (< 651,172 bytes). If the size check
->    fails, lower the body ratio a little in `prepare-model.py` and rebuild.
-> 4. `npm run dev`: check the SELECT and START labels are straight, and that △, □ and START glow and click as before.
->    The page picks up the real meshes by name (`button5_low`, `button8_low`, `button15_low`) and skips the stand-ins.
-> 5. Update the triangle and byte counts under **Blender** and **Output** below, delete this note, and commit the model.
-
 - **Source**: `assets-src/psp.glb`, preserved unchanged and excluded from the public build.
 - **Build**: `npm run model:optimize` requires Blender and KTX-Software 4.4+ (`ktx` on PATH). `BLENDER_BIN` can override the Blender executable; the usual macOS application path is detected automatically.
-- **Blender**: `scripts/prepare-model.py` writes a temporary cleaned export. It welds coincident vertices, removes degenerate and non-manifold internal faces conservatively, recalculates outward normals, decimates the static parts (0.6 since the pending rebuild; the shipped model used 0.66 and has 39,980 triangles) and joins them into `body_low`. Buttons are never decimated. All material faces are single-sided. It retains `screen_low` and the button meshes separately, with their exact names: buttons 1–9, SELECT (14) and START (15).
+- **Blender**: `scripts/prepare-model.py` writes a temporary cleaned export. It welds coincident vertices, removes degenerate and non-manifold internal faces conservatively, recalculates outward normals, keeps the printed front shell intact and decimates the other static parts at a 0.47 ratio, giving 39,590 triangles in the complete model and joins them into `body_low`. Buttons are never decimated. All material faces are single-sided. It retains `screen_low` and the button meshes separately, with their exact names: buttons 1–9, SELECT (14) and START (15).
 - **Screen UVs**: planar projection is baked into the export, with U right and V up in the final glTF. The separate screen material carries no atlas texture.
 - **Textures**: albedo stays 1536²; emissive shrinks to 512², normal to 768², and metal/roughness to 256². ETC1S compresses albedo/emissive, UASTC with RDO compresses normal/metal/roughness, and all atlas textures have mipmaps. The XMB CanvasTexture continues to use linear filtering without mipmaps.
 - **Geometry**: meshopt compression uses one scene quantization grid. Nodes have transforms: halo placement goes through the button matrix and presses move from the rest position.
-- **Validation**: `npm run model:check` decodes the shipped asset and checks names, triangle/file budgets, culling, KTX2 textures, and screen UV orientation. The optimizer runs this check before replacing the public asset. Missing tools or failed validation leave the previous asset intact.
-- **Output**: `public/models/psp-v3.glb`, 562,600 bytes (466,794 gzip), 9 model draw calls instead of 20. The seven halo quads make 16 scene draw calls in total. Estimated texture GPU allocation is about 2.6 MB minimum; actual allocation depends on supported compression formats.
+- **Validation**: `npm run model:check` decodes the shipped asset and requires all 13 mesh names and undecimated buttons, and checks triangle/file budgets, culling, KTX2 textures, and screen UV orientation. The optimizer runs this check before replacing the public asset. Missing tools or failed validation leave the previous asset intact.
+- **Output**: `public/models/psp-v3.glb`, 559,248 bytes (453,196 gzip), 13 model draw calls instead of 20. The PSP logo and SELECT/START labels retain their original geometry and straight lettering. The eight menu-button halos give 21 scene draw calls while browsing; Button Rush also lights △ and □, giving 23. Estimated texture GPU allocation is about 2.6 MB minimum; actual allocation depends on supported compression formats.
 - **Loading**: `src/modelAsset.js` owns `MODEL_URL` and shares one early fetch between the shell and scene. It starts alongside the lazy three.js import, streams byte progress when an uncompressed length is available, and clears failed downloads for Retry. An HTML fetch preload caused duplicate downloads in WebKit and has been removed.
 - **Decoding**: `GLTFLoader.parseAsync` gets the shared bytes, `MeshoptDecoder`, and `KTX2Loader`. Vite emits hashed Basis JS/WASM assets fetched only when KTX2 textures need them.
 - **Tradeoff**: v2's JPEG model was 651 KB (410 KB gzip). v3 is smaller before HTTP compression but larger after gzip and needs the Basis transcoder on a cold cache. The gain is lower GPU memory, fewer draw calls, fewer triangles, and no duplicate WebKit model download.

@@ -162,3 +162,7 @@ The GTA cash bar's digits are an image. To redraw it, see `scripts/render-cash-s
 1. `npm run dev` and click through what you changed.
 2. Run `npm test` and make sure it passes.
 3. Run `git diff src/xmb/content.js` and check only the text you meant to change has changed.
+
+### Leave a memo
+
+Memories shows a “+ Leave a memo!” button beneath the PSP. `src/LeaveMemo.jsx` opens a native dialog with an invite-code step and a message form. Set the hard-coded invite code in `src/memo.js` (`CAMWAD-MILIND`); matching ignores case and surrounding spaces. The recipient comes from Contact’s email item in `src/xmb/content.js`. “Open email draft” fills the subject and message in the visitor’s email app, where a photo can be attached. Memories are added to the site manually after review. This flow uses no backend and stores neither codes nor draft messages in browser storage.

@@ -19,6 +19,9 @@ const TEXT='#dadada', BRIGHT='#ffffff', P5_RED='#e5191c';
 const BODY_TOP=62, BODY_BOTTOM=222, LINE_H=13, SCROLL_STEP=LINE_H*2;
 // An open folder slides its column this far left and lists its entries this far right of the folder icon.
 const FOLDER_SHIFT=70, FOLDER_GAP=72;
+// Clear outgoing Start/folder labels before revealing incoming text (~85 ms into opening).
+// Progress-based stages also run backwards cleanly when a transition is interrupted.
+const TEXT_FADE_OUT=.6, TEXT_FADE_IN=.7, SUBTEXT_FADE_AT=.65;
 // Detail pages: the gap between a floated image and the text beside it, and between grid cards.
 const FLOAT_GAP=12, GRID_GAP=8;
 // GTA skin: a Vice City skyline along the horizon, as [x, width, height] blocks.
@@ -276,10 +279,12 @@ export class XmbRenderer{
   clear(ctx);clear(this.overlay);
   this.hits=[];this.pulses=[];
   const menu=clamp01((booted-.7)/.6), overlay=Math.max(shown.detail,shown.photo,shown.game), start=shown.start;
+  const progress=1-start, startAlpha=clamp01(1-progress/TEXT_FADE_OUT);
+  const pageAlpha=clamp01((progress-TEXT_FADE_IN)/(1-TEXT_FADE_IN));
   this.status(menu);
-  if(start>0)this.startScreen(menu*start,!state.started);
-  this.menu(menu*(1-overlay)*(1-start),state.started&&state.view==='menu');
-  this.folder(menu*(1-overlay)*(1-start),state.started&&state.view==='folder');
+  if(startAlpha>0)this.startScreen(menu*startAlpha,!state.started);
+  this.menu(menu*(1-overlay)*pageAlpha,state.started&&state.view==='menu');
+  this.folder(menu*(1-overlay)*pageAlpha,state.started&&state.view==='folder');
   // Page backgrounds and text must cover the outgoing menu's animated label.
   this.ctx=this.overlay;
   try{
@@ -429,22 +434,23 @@ export class XmbRenderer{
     else{ctx.font=`11px ${FONT}`;ctx.fillText(category.label,x,CAT_Y+27);}
    }
    if(live)this.hits.push({x:x-CAT_W/2,y:CAT_Y-24,w:CAT_W,h:46,action:{type:'FOCUS',cat:c}});
-   const column=clamp01(1-Math.abs(offset)*1.6);
+   // Clear the outgoing item column before another column can occupy its text area.
+   const column=clamp01(1-Math.abs(offset)/.45);
    if(column>0)this.items(category,c,x,visible*column,live&&c===state.cat,c===state.cat?open:0);
   });
   this.noShadow();ctx.globalAlpha=1;
  }
  // open is how far this column's folder is open: the other items fade and the folder keeps only its icon.
  items(category,c,x,alpha,interactive,open=0){
-  const position=this.shown.items[c], focused=this.state.item[c];
+  const position=this.shown.items[c], focused=this.state.item[c], labels=clamp01(1-open/TEXT_FADE_OUT);
   category.items.forEach((item,i)=>{
    const d=i-position;
    // Items above the focused one tuck in above the category bar, crossing it with a fade.
    const y=d>=0?ITEM_Y+d*ROW_H:d>-1?ITEM_Y+d*(ITEM_Y-ABOVE_Y):ABOVE_Y+(d+1)*ROW_H;
    if(y<-ROW_H||y>SCREEN_H+ROW_H)return;
-   const near=clamp01(1-Math.abs(d)), fade=d<0&&d>-1?Math.abs(d+.5)*2:1, keep=i===focused?1:1-open;
+   const near=clamp01(1-Math.abs(d)), fade=d<0&&d>-1?Math.abs(d+.5)*2:1, keep=i===focused?1:labels;
    if(keep<=.01)return;
-   this.row(item,x,y,{near,alpha:alpha*fade*(.7+.3*near)*keep,subAlpha:alpha*fade*near,labelAlpha:i===focused?1-open:1,focused:i===focused&&near>.5,
+   this.row(item,x,y,{near,alpha:alpha*fade*(.7+.3*near)*keep,subAlpha:alpha*fade*near,labelAlpha:i===focused?labels:1,focused:i===focused&&near>.5,
     hit:interactive&&fade>.5?(i===focused?{type:'CONFIRM'}:{type:'FOCUS',cat:c,item:i}):null});
   });
  }
@@ -467,16 +473,17 @@ export class XmbRenderer{
   const open=this.shown.folder, entries=currentItem(this.state)?.folder;
   if(alpha<=0||open<=.01||!entries)return;
   const ctx=this.ctx, state=this.state, x=CAT_X-FOLDER_SHIFT+FOLDER_GAP+(1-open)*24;
+  if(interactive)this.hits.push({x:0,y:ITEM_Y-ROW_H/2,w:x-22,h:ROW_H,action:{type:'BACK'}});
+  const reveal=clamp01((open-TEXT_FADE_IN)/(1-TEXT_FADE_IN));
+  if(reveal<=.01)return;
   entries.forEach((entry,i)=>{
    const d=i-this.shown.sub, y=ITEM_Y+d*ROW_H, near=clamp01(1-Math.abs(d));
    if(y<CAT_Y-ROW_H||y>SCREEN_H+ROW_H)return;
-   this.row(entry,x,y,{near,alpha:alpha*open*(.7+.3*near),subAlpha:alpha*open*near,focused:i===state.sub&&near>.5,
+   this.row(entry,x,y,{near,alpha:alpha*reveal*(.7+.3*near),subAlpha:alpha*reveal*near,focused:i===state.sub&&near>.5,
     hit:interactive?(i===state.sub?{type:'CONFIRM'}:{type:'FOCUS',sub:i}):null});
   });
   if(interactive){
-   // The folder icon itself closes it again.
-   this.hits.push({x:0,y:ITEM_Y-ROW_H/2,w:x-22,h:ROW_H,action:{type:'BACK'}});
-   ctx.globalAlpha=alpha*open;this.hint('✕ Apply   ○ Back',true);
+   ctx.globalAlpha=alpha*reveal;this.hint('✕ Apply   ○ Back',true);
   }
   this.noShadow();ctx.globalAlpha=1;
  }
@@ -499,7 +506,8 @@ export class XmbRenderer{
    }
    else if(this.gta)this.outlined(ctx,label,x+26,labelY);
    else ctx.fillText(label,x+26,labelY);
-   if(sub&&near>0){this.shadow(2);ctx.globalAlpha=subAlpha*labelAlpha;ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,x+26,subY);}
+   const subVisible=clamp01((near-SUBTEXT_FADE_AT)/(1-SUBTEXT_FADE_AT));
+   if(sub&&subVisible>.01){this.shadow(2);ctx.globalAlpha=subAlpha*labelAlpha*subVisible;ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,x+26,subY);}
   }
   if(hit)this.hits.push({x:x-18,y:y-ROW_H/2,w:SCREEN_W-x+18,h:ROW_H,action:hit});
  }

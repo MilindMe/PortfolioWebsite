@@ -26,3 +26,9 @@ Validation on the production build (2026-10-25):
 Physical-device checks still need hardware:
 
 - [ ] Open in the released Safari browser and on a real phone. Check text sharpness, touch input and idle power/frame rate. Automated desktop WebKit and an emulated iPhone viewport do not replace these checks.
+
+## Real-button model rebuild (2026-10-27)
+
+Rebuilt the source with Blender and KTX-Software 4.4.2. The published `psp-v3.glb` now has 39,590 triangles, 13 meshes, and 559,248 bytes (453,196 gzip), within the 40,000 triangle and 651,172 byte budgets. Triangle, square, SELECT, and START remain separate, and every retained button has its original triangle count. The printed front shell also stays intact: decimating it warped the PSP logo, so the remaining static parts use a 0.47 ratio instead. The source stays untouched.
+
+The model checker now requires all 13 meshes and compares button triangle counts with the source. All four textures remain KTX2 with the previous resolutions and allocation. Browsing renders 21 scene draw calls (13 model meshes plus eight button glows); Button Rush renders 23 with triangle and square lit too. Chrome and desktop/mobile Playwright WebKit checks cover real START, triangle, square, and Home clicks/taps, including Button Rush progress and desktop button depression. SELECT/START lettering was visually checked. These are browser/emulation checks; real-device validation remains outstanding.

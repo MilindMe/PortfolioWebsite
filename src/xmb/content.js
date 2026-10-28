@@ -47,9 +47,7 @@ export const categories = [
  {
   id:'memories', label:'Memories', icon:'photo',
   items:[
-   {id:'memory-1', label:'First hackathon', sub:'Add /public/memories/hackathon.jpg', icon:'camera', photo:'/memories/hackathon.jpg', caption:'First hackathon — 36 hours, one working demo.'},
-   {id:'memory-2', label:'Conference talk', sub:'Add /public/memories/talk.jpg', icon:'camera', photo:'/memories/talk.jpg', caption:'Giving my first conference talk.'},
-   {id:'memory-3', label:'Team offsite', sub:'Add /public/memories/offsite.jpg', icon:'camera', photo:'/memories/offsite.jpg', caption:'Team offsite.'},
+   {id:'rodrigues', label:'Rodrigues', icon:'camera', photo:'/memories/rodrigues.webp', caption:'Rodrigues'},
   ],
  },
  {
@@ -66,7 +64,7 @@ export const categories = [
      {type:'p', text:'Games, music and side projects. Say what you\'re into and what you\'re looking for next.'},
     ], links:[resume]}},
 
-   {id:'experience', label:'Experience', sub:'Where I\'ve worked', icon:'briefcase',
+   {id:'experience', label:'Work Experience', icon:'briefcase',
     detail:{title:'Experience', sub:'Most recent first', focus:true, blocks:[
      {type:'timeline', entries:[
       {when:'2024 — Present', role:'Role', org:'Company', current:true, points:['What you own and a highlight or two.', 'An outcome with a number that shows impact.']},
@@ -92,7 +90,7 @@ export const categories = [
   items:[
    {id:'email', label:'Email', sub:'msmeetar@uwaterloo.ca', icon:'mail', link:'mailto:msmeetar@uwaterloo.ca'},
    {id:'github', label:'GitHub', sub:'github.com/MilindMe', icon:'github', link:'https://github.com/MilindMe'},
-   {id:'linkedin', label:'LinkedIn', sub:'Connect with me', icon:'linkedin', link:'https://www.linkedin.com/MilindMeetarbhan'},
+   {id:'linkedin', label:'LinkedIn', sub:'Connect with me', icon:'linkedin', link:'https://www.linkedin.com/in/milindmeetarbhan/'},
    {id:'resume', label:'Résumé', sub:'PDF', icon:'resume', link:RESUME_URL},
   ],
  },

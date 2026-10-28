@@ -42,7 +42,8 @@ test('NEXT and PREV scroll a detail page within its limit',()=>{
 test('NEXT and PREV step through photos without leaving the category',()=>{
  const cat=categories.findIndex(category=>category.items.some(item=>item.photo)), count=categories[cat].items.length;
  const photo={...menu(cat,0),view:'photo'};
- assert.deepEqual(focus(xmbReducer(photo,{type:'NEXT'})),[cat,1]);
+ const next=xmbReducer(photo,{type:'NEXT'});
+ assert.deepEqual(focus(next),[cat,1%count]);assert.equal(next.view,'photo');
  assert.deepEqual(focus(xmbReducer(photo,{type:'PREV'})),[cat,count-1]);
 });
 

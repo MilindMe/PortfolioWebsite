@@ -21,9 +21,8 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .scene-status { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #cdbb95; display: grid; place-items: center; width: 52px; height: 52px; }
 .retry { border: 1px solid #d7ceb433; border-radius: 50%; background: #20372bd9; }
 .memories-stage{position:absolute;inset:0;background:radial-gradient(ellipse at 62% 48%,#111113 0%,#070708 55%,#020202 100%);overflow:hidden}
-.memories-stage>canvas{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:none}
+.memories-stage>canvas{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:none;outline:none;-webkit-tap-highlight-color:transparent}
 .memories-stage>canvas:active{cursor:grabbing}
-.memories-stage>canvas:focus-visible{outline:1px solid #ddd;outline-offset:-8px}
 .loading-screen{position:fixed;inset:0;z-index:1000;overflow:hidden;cursor:wait;color:#e9e9ee;background:linear-gradient(180deg,#141418 0%,#08080a 100%)}
 /* The XMB ribbon across the middle: each band is twice the page wide and slides half its width per loop. */
 .loading-ribbon{position:absolute;left:0;right:0;top:50%;height:min(40vh,360px);transform:translateY(-50%)}
@@ -333,3 +332,35 @@ button:focus-visible { outline: 2px solid #d8be91; outline-offset: 3px; }
 .trophy-card.grade-platinum{--grade:#bfe3ff}
 @keyframes trophy-card{0%{transform:translateX(24px);opacity:0}7%,92%{transform:none;opacity:1}100%{transform:translateX(24px);opacity:0}}
 .page.phone .trophy-region{top:10px;right:14px}
+
+/* A shared memory starts as an invite, then hands a personal note to the visitor's email app. */
+.leave-memo{position:absolute;z-index:4;left:50%;bottom:max(24px,5vh);transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:11px 18px;
+ border:1px solid #d8be9166;border-radius:999px;background:#14231fe8;color:#eee8d9;font-size:14px;box-shadow:0 4px 20px #0006;transition:background .2s,border-color .2s}
+.leave-memo:hover{background:#263b31;border-color:#d8be91}
+.page.phone .leave-memo{bottom:max(8px,2cqh);padding:7px 12px;font-size:12px;gap:6px}
+.page.phone .leave-memo svg{width:15px;height:15px}
+.memo-dialog{width:min(440px,calc(100vw - 32px));max-height:calc(100svh - 32px);margin:auto;overflow:auto;padding:30px;border:1px solid #d8be914d;border-radius:18px;
+ background:linear-gradient(145deg,#20332b,#111e19);color:#eee8d9;box-shadow:0 24px 80px #0009;font:14px/1.5 Inter,Arial,sans-serif}
+.memo-dialog::backdrop{background:#020705b8;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.memo-close{position:absolute;right:13px;top:13px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;color:#b9c5b8}
+.memo-close:hover{background:#ffffff0d;color:#fff}
+.memo-symbol{width:48px;height:48px;display:grid;place-items:center;border:1px solid #d8be9138;border-radius:12px;color:#d8be91;background:#d8be9108}
+.memo-eyebrow{margin:19px 0 5px;font-size:10px;letter-spacing:.2em;color:#cdb58c}
+.memo-dialog h2{margin:0 0 10px;font-size:25px;font-weight:500;letter-spacing:-.035em;line-height:1.2}
+.memo-dialog #memo-description{margin:0 0 23px;color:#bdc9bd}
+.memo-dialog form{display:grid;gap:9px}
+.memo-dialog label{font-size:12px;font-weight:600;color:#e4dfd2}
+.memo-dialog label span{font-weight:400;color:#9eafa1}
+.memo-dialog input,.memo-dialog textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid #ffffff29;border-radius:8px;background:#09160fb3;color:#f6f2e9;font:inherit;font-size:16px;outline:none;transition:border-color .2s}
+.memo-dialog input:focus,.memo-dialog textarea:focus{border-color:#d8be91;box-shadow:0 0 0 2px #d8be9120}
+.memo-dialog input[aria-invalid="true"],.memo-dialog textarea[aria-invalid="true"]{border-color:#efa99c}
+.memo-dialog textarea{resize:vertical;min-height:110px;max-height:240px}
+.memo-dialog input+label{margin-top:8px}
+.memo-dialog textarea::placeholder{color:#829485}
+.memo-submit{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:9px;padding:12px 15px;border-radius:8px;background:#d8be91;color:#14231c;font-weight:700}
+.memo-submit:hover{background:#e6cda3}
+.memo-submit svg:last-child{margin-left:auto}
+.memo-submit svg:first-child{flex:none}
+.memo-dialog .memo-error{margin:0;font-size:12px;color:#ffb7a7}
+.memo-dialog .memo-handoff{margin:2px 0 0;font-size:12px;color:#a4b5a6}
+@media(max-height:500px){.memo-dialog{padding:22px;max-height:calc(100svh - 16px)}.memo-symbol{display:none}.memo-eyebrow{margin-top:0}.memo-dialog #memo-description{margin-bottom:15px}.memo-dialog textarea{min-height:80px}}
