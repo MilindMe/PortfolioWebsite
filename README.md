@@ -1,6 +1,6 @@
 # Portfolio website
 
-A standalone React + Vite starting point copied from the Memories page in `../music_website`.
+A Portfolio Website inspired by the PlayStationPortable
 
 ## Development
 
