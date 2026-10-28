@@ -1,3 +1,7 @@
-# Cloudflare Pages headers. The résumé always downloads, even when its URL is opened directly.
+# Cloudflare Workers Static Assets / Pages headers. The résumé always downloads, even when its URL is opened directly.
 /resume.pdf
   Content-Disposition: attachment; filename="Milind-Meetarbhan-Resume.pdf"
+
+# Vite fingerprints these files, including the Basis transcoder's JS and WASM.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

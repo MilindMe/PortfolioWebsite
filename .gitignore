@@ -5,3 +5,8 @@ dist/
 
 # XMB PS3 sound pack as downloaded; the sounds the site uses live in public/sounds.
 /sounds/
+
+# Wrangler local state and credentials.
+.wrangler/
+.dev.vars
+.dev.vars.*

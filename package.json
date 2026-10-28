@@ -9,7 +9,10 @@
     "preview": "vite preview --host 0.0.0.0",
     "model:optimize": "scripts/optimize-model.sh",
     "model:check": "node scripts/check-model.mjs",
-    "test": "node --test scripts/*.test.mjs"
+    "test": "node --test scripts/*.test.mjs",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:check": "npm run build && wrangler deploy --dry-run",
+    "preview:cloudflare": "npm run build && wrangler dev"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -22,6 +25,7 @@
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
     "meshoptimizer": "^1.2.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "wrangler": "4.154.0"
   }
 }

@@ -66,3 +66,35 @@ npm run build
 The cleanup preserves the source file and all interactive mesh names, reduces 58,200 triangles to 39,590, joins the static body, recalculates normals, enables backface culling, and bakes the screen UVs. The printed front shell and all buttons remain undecimated, with △, □, SELECT and START kept separate to preserve their labels and real click targets. The shipped model has 13 meshes, weighs 559 KB (453 KB gzip), and uses four KTX2 textures with about 2.6 MB estimated minimum GPU allocation. The previous JPEG model was 651 KB (410 KB gzip); KTX2 also needs a one-time Basis transcoder download, trading additional cold-load bytes for much lower GPU memory and fewer draw calls.
 
 The shell starts one shared model fetch alongside the lazy scene import. This avoids duplicate HTML fetch preloads in WebKit. See [`docs/perf-followups.md`](docs/perf-followups.md) for browser validation and remaining physical-device checks.
+
+## Cloudflare Workers deployment
+
+`wrangler.jsonc` configures **psportfolio-milind** to serve the Vite build in `dist/` using Workers Static Assets. The portfolio needs no Worker entry script, database, API, or runtime secrets. All XMB navigation stays on `/`, so missing files return a real 404. The PSP model and KTX2/Basis files are committed or emitted by Vite; deployment does not run Blender or KTX-Software.
+
+For a Git-connected Worker, use these Cloudflare build settings:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Root directory | repository root |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Worker name | `psportfolio-milind` |
+| Node.js | `24` (from `.node-version`) |
+
+The installed Wrangler requires Node.js 22 or newer; `.node-version` selects Node.js 24 for Workers Builds and compatible local version managers. See [build image configuration](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/). The build environment must install development dependencies, including Vite and Wrangler (`npm ci` installs the locked versions). `npx wrangler` alone displays the CLI; the deployment command includes `deploy`. Workers Builds uses its configured Cloudflare authentication; do not put tokens in the repository. See [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/).
+
+For local checks:
+
+```sh
+npm ci
+npm test
+npm run deploy:check
+npm run preview:cloudflare
+```
+
+`deploy:check` builds and runs a Wrangler dry run without publishing. `preview:cloudflare` builds and starts Wrangler locally, including the `_headers` rules. After reviewing the preview, `npm run deploy` builds and publishes; first authenticate with `npx wrangler login` if deploying from your laptop.
+
+`public/_headers` preserves the résumé attachment header and caches only Vite's hashed `/assets/*` files for a year. The model, photographs, sound files and HTML keep Cloudflare's default revalidation behavior, so replacing a file does not leave a year-old browser copy. See [static asset headers](https://developers.cloudflare.com/workers/static-assets/headers/).
+
+Before publishing, supply the résumé at `public/resume.pdf` (currently missing), review the remaining portfolio content, and check the built site in the local Wrangler preview. The memo form opens a draft email for manual review; it needs no backend. Custom domains can be attached to the Worker in Cloudflare after deployment.

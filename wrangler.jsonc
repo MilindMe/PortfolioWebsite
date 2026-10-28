@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "psportfolio-milind",
+  "compatibility_date": "2026-10-28",
+  // Vite's complete production output: HTML, JS, models, sounds and images.
+  // The XMB stays on /; missing files should return 404 rather than the page shell.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "none"
+  }
+}

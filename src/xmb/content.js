@@ -55,21 +55,21 @@ export const categories = [
   id:'memories', label:'Memories', icon:'photo',
   items:[
    {id:'leave-memo', label:'Leave a memo', sub:'Have an invite code?', icon:'plus', memo:true},
-   {id:'rodrigues', label:'Rodrigues', icon:'camera', photo:'/memories/rodrigues.webp', caption:'Rodrigues'},
+   {id:'rodrigues', label:'Rodrigues Island', icon:'camera', photo:'/memories/rodrigues.webp', caption:'Rodrigues Island - off the coast of Mauritius'},
   ],
  },
  {
   id:'about', label:'About', icon:'user',
   items:[
    {id:'bio', label:'About me', sub:'Who I am', icon:'resume',
-    detail:{title:'Hi, I\'m Milind', sub:'Developer · Builder of playable things', focus:true, blocks:[
-     {type:'p', text:'I\'m a developer who likes building things people can touch and play with, from product features used every day to experiments like this PSP.'},
+    detail:{title:'Hi, I\'m Milind', sub:'Software Engineer', focus:true, blocks:[
+     {type:'p', text:'I\'m a developer with a passion for developing software that is fun, creative and useful.'},
      {type:'h', text:'What I do'},
-     {type:'p', text:'Replace this with what you work on day to day: the kind of products, the platforms and the problems you enjoy solving.'},
+     {type:'p', text:'Build Generative AI applications to automate workflows, android development in Kotlin, production grade web-apps in React.'},
      {type:'h', text:'What I care about'},
-     {type:'list', items:['Interfaces that feel fast and considered', 'Clean, well-tested code that teammates enjoy working in', 'Shipping, learning and iterating']},
+     {type:'list', items:['User Experience', 'Shaping a product for the audience, not the developer', 'Shipping, learning and iterating']},
      {type:'h', text:'Outside of work'},
-     {type:'p', text:'Games, music and side projects. Say what you\'re into and what you\'re looking for next.'},
+     {type:'p', text:'Music! In my free time, I play guitar, make music, and listen to Led Zeppelin!'},
     ], links:[resume]}},
 
    {id:'experience', label:'Work Experience', icon:'briefcase',
