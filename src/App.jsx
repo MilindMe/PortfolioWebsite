@@ -180,9 +180,8 @@ export default function App() {
     setLightTurns(value => value + 1);
   }
   const Wheel = wheels[experience.wheel], CutIn = cutIns[experience.id];
-  // Pages worth reading in full tuck the wheel away and let the PSP grow back to its big framing; the mini game tucks
-  // it away too and lets the PSP fill the page.
-  const focus = xmb.view === 'game' ? 'game' : readingFocus(xmb) && experience.wheel ? 'read' : false;
+  // Reading pages and Button Rush share the enlarged framing in every theme.
+  const focus = xmb.view === 'game' ? 'game' : readingFocus(xmb) ? 'read' : false;
   return <div className="app-shell memories-page">
     <main className={`page experience-${experience.id}${ROTATION_LOCKED ? ' rotation-locked' : ''}${PHONE ? ' phone' : ''}`} aria-label="Memories — interactive PSP" inert={splash}>
       <div className="scene">

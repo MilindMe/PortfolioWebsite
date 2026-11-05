@@ -142,6 +142,25 @@ test('laid-out pages draw their headings and timeline, and scroll when long',t=>
  xmb.dispose();
 });
 
+for(const skin of ['xmb','persona5','gta','bo2'])test(`About fits one screen and its résumé and back controls work in ${skin}`,t=>{
+ const previousImage=globalThis.Image;globalThis.Image=class {};
+ t.after(()=>{if(previousImage===undefined)delete globalThis.Image;else globalThis.Image=previousImage;});
+ const {xmb,state}=renderer(t,true);
+ xmb.setSkin(skin);
+ xmb.setState({...state,cat:3,view:'detail',scroll:20});xmb.tick(2000);
+ assert.equal(xmb.maxScroll,0);
+ const at=(x,y)=>xmb.hitTest(x*480/1280,y*270/800);
+ assert.deepEqual(at(1100,231),{type:'CONFIRM',link:0});
+ assert.deepEqual(at(1100,756),{type:'CONFIRM',link:0});
+ assert.deepEqual(at(1180,756),{type:'BACK'});
+ assert.equal(at(500,400),null,'body text must not open the résumé');
+ for(const label of ['Generative AI','Android development','Web applications','WHAT I CARE ABOUT','Résumé']){
+  assert(xmb.out.events.includes(label),`${label} missing in ${skin}`);
+ }
+ assert(xmb.out.events.includes(skin==='persona5'?"HI, I'M MILIND":"Hi, I'm Milind"));
+ xmb.dispose();
+});
+
 test('the Start screen shows only START, and a tap anywhere starts',t=>{
  const {xmb,state}=renderer(t,true);
  xmb.setState({...state,cat:5,started:false,unlocked:false});xmb.shown.start=null;

@@ -11,7 +11,7 @@ Where every piece of text, link, image and setting lives, and how to change it. 
 | `themeItem`, `RESUME_URL`, `RESUME_FILE` and `resume` at the top | Settings, the résumé buttons and the quick links use them. |
 | The **Settings** category exactly as it is (the `classics` folder plus `...themes.filter(...)`) | It's built from `themes.js`. Hand-writing it loses the Classics folder. |
 | The ids `bio`, `button-rush`, `github`, `linkedin`, `email`, `resume` | The name in the corner opens `bio`, the quick links read `github` and `linkedin`, and Button Rush is opened by `game:'button-rush'`. |
-| `focus:true` on project, About me and Experience pages | It marks them as reading pages: the game themes tuck their wheel away and the PSP grows back while they're open. |
+| `focus:true` on project and About pages | It marks them as reading pages: every theme enlarges the PSP to the same size as Button Rush and tucks any navigation wheel away while they're open. |
 | `blocks:[...]` on About me and Experience | That's the laid-out page format (headings, bullets, timeline). A plain `body` works too, but loses the layout. |
 
 If you paste an older copy of the file over it, compare it with `git diff` first. That's how the Classics folder went missing once.

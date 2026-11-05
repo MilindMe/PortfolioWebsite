@@ -62,14 +62,16 @@ export const categories = [
   id:'about', label:'About', icon:'user',
   items:[
    {id:'bio', label:'About me', sub:'Who I am', icon:'resume',
-    detail:{title:'Hi, I\'m Milind', sub:'Software Engineer', focus:true, blocks:[
-     {type:'p', text:'I\'m a developer with a passion for developing software that is fun, creative and useful.'},
+    detail:{title:'Hi, I\'m Milind', sub:'Software Engineer', focus:true, layout:'about', blocks:[
+     {type:'p', text:'I’m a developer with a passion for building software that is fun, creative and useful.'},
      {type:'h', text:'What I do'},
-     {type:'p', text:'Build Generative AI applications to automate workflows, android development in Kotlin, production grade web-apps in React.'},
+     {type:'grid', columns:1, items:[
+      {title:'Generative AI', text:'Building applications that automate workflows.'},
+      {title:'Android development', text:'Developing native Android experiences in Kotlin.'},
+      {title:'Web applications', text:'Building production-grade applications in React.'},
+     ]},
      {type:'h', text:'What I care about'},
-     {type:'list', items:['User Experience', 'Shaping a product for the audience, not the developer', 'Shipping, learning and iterating']},
-     {type:'h', text:'Outside of work'},
-     {type:'p', text:'Music! In my free time, I play guitar, make music, and listen to Led Zeppelin!'},
+     {type:'list', items:['User Experience', 'Shaping a product for the audience, not the developer.', 'Shipping, learning and iterating.']},
     ], links:[resume]}},
 
    {id:'experience', label:'Work Experience', icon:'briefcase',
@@ -84,14 +86,18 @@ export const categories = [
     ], links:[resume]}},
 
    {id:'skills', label:'Skills', sub:'Languages & tools', icon:'wrench',
-    detail:{title:'Skills', body:'Languages: Go, C, C#, TypeScript, Kotlin, Python\nFrameworks & Libraries: React, React Native, Angular, PyTorch, Langchain, LangGraph\nTools: Git, CI/CD, Figma'}},
+    detail:{title:'Skills', focus:true, body:'Languages: Go, C, C#, TypeScript, Kotlin, Python\nFrameworks & Libraries: React, React Native, Angular, PyTorch, Langchain, LangGraph\nTools: Git, CI/CD, Figma'}},
 
    {id:'education', label:'Education', sub:'Studies', icon:'education',
-    detail:{title:'Education', blocks:[
+    detail:{title:'Education', focus:true, blocks:[
      {type:'image', src:'/education/uw-seal.webp', alt:'University of Waterloo seal', align:'right', width:76},
      {type:'h', text:'University of Waterloo'},
      {type:'p', text:'Combinatorics & Optimization + Statistics'},
      {type:'p', text:'Minor in Computing'},
+     {type:'p', text:''},
+     {type:'image', src:'/education/college-du-saint-esprit.png', alt:'College Du Saint Esprit crest', align:'right', width:76},
+     {type:'h', text:'College Du Saint Esprit'},
+     {type:'p', text:'Cambridge A-levels, Cambridge O-levels'},
     ]}},
   ],
  },

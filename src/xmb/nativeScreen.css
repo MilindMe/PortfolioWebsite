@@ -1,0 +1,72 @@
+/* Experiment: actual DOM text, sized in the projected screen's own CSS pixels. */
+.native-screen{position:absolute;left:0;top:0;z-index:3;transform-origin:0 0;visibility:hidden;container-type:size;overflow:hidden;isolation:isolate;color:#fff;font-family:Inter,"Helvetica Neue",Arial,sans-serif;--native-accent:#fff;--native-muted:#e0d3d6;background:linear-gradient(155deg,var(--screen-top),var(--screen-bottom) 70%,#080b12);border-radius:.5%;pointer-events:auto}
+.native-screen[data-active="false"]{display:none}
+.native-screen-page{position:absolute;inset:0;background:#0005;display:flex;flex-direction:column;font-size:2.1cqw;line-height:1.4}
+.native-screen button{font:inherit;line-height:1.2}
+.native-screen button:focus-visible{outline:.3cqw solid var(--native-accent);outline-offset:.4cqw}
+.native-header{margin:0 5.8cqw;padding:4cqh 0 3cqh;border-bottom:.15cqw solid #ffffff40;flex:none}
+.native-header h2{margin:0;color:var(--native-accent);font-size:3.15cqw;line-height:1.15}
+.native-header p{margin:.5cqh 0 0;color:var(--native-muted);font-size:1.8cqw}
+.native-body{margin:3cqh 6.25cqw 0;overflow:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:#ffffff80 #ffffff10;overscroll-behavior:contain;touch-action:pan-y}
+.native-body h3{font-size:2.1cqw;text-transform:uppercase;color:var(--native-accent);margin:2.5cqh 0 2cqh;line-height:1.2}
+.native-body h3:after{content:"";display:block;width:5cqw;height:.2cqw;background:var(--native-accent);margin-top:1.2cqh}
+.native-body p{margin:0 0 2cqh;white-space:pre-line}
+.native-copy{line-height:1.8}
+.native-body figure{margin:0 0 2cqh 2.5cqw;clear:both}
+.native-body figure:not(:first-child){margin-top:3cqh}
+.native-body figure:not(:first-child)+h3{padding-top:3cqh}
+.native-logo img{display:block;max-width:100%;max-height:28cqh;margin-left:auto}
+.native-banner{width:100%}
+.native-banner img,.native-grid img{max-width:100%}
+.native-timeline{list-style:none;margin:0;padding:0 0 0 4cqw}
+.native-timeline>li{position:relative;border-left:.25cqw solid #ffffff38;margin:0;padding:0 0 3cqh 3cqw}
+.native-timeline>li:before{content:"";position:absolute;width:1.3cqw;height:1.3cqw;left:-.8cqw;top:.7cqh;border:.25cqw solid white;border-radius:50%;background:var(--screen-bottom)}
+.native-timeline time,.native-timeline strong,.native-timeline span{display:block}
+.native-timeline time{font-size:1.8cqw;color:var(--native-muted)}
+.native-timeline strong{font-size:2.4cqw}
+.native-timeline span{font-size:2cqw;font-style:italic}
+.native-grid{display:grid;gap:2cqw}
+.native-grid section{background:#ffffff0d;padding:1.5cqw;border:1px solid #ffffff20}
+.native-footer{flex:none;display:flex;align-items:center;justify-content:space-between;min-height:11cqh;margin:0 5.8cqw;font-size:1.9cqw;gap:2cqw}
+.native-footer nav{display:flex;gap:1cqw}
+.native-footer nav button{border:1px solid #ffffff50;border-radius:5cqw;padding:1cqh 2cqw}
+.native-footer .selected{background:#fff;color:#171117}
+.native-persona5{--native-accent:#e5191c;--native-muted:#ddd;background:repeating-conic-gradient(from 10deg at 80% 80%,#340004 0deg 12deg,#170003 12deg 24deg)}
+.native-persona5 .native-header h2,.native-persona5 h3,.native-persona5 .native-eyebrow{font-family:Anton,Impact,sans-serif;text-transform:uppercase}
+.native-persona5 .native-header{border-bottom:.5cqw solid #e5191c}
+.native-gta{--native-accent:#ec6fae;--native-muted:#c6dce2;background:linear-gradient(160deg,#442133,#0d2937 70%,#080d18)}
+.native-gta .native-header{border-image:linear-gradient(90deg,#ec6fae,#76d9ec) 1}
+.native-bo2{--native-accent:#f47b20;--native-muted:#bac8c8;background:linear-gradient(150deg,#252d28,#0a0d0c)}
+.native-bo2 .native-header{border-bottom:.4cqw solid #f47b20}
+.native-bo2 .native-header h2{font-family:"Arial Narrow",Arial,sans-serif;text-transform:uppercase}
+.native-about{--native-muted:#dac0c1}
+.native-about .native-screen-page{background:#0004}
+.native-about-status{position:relative;display:flex;justify-content:space-between;padding:4cqh 5.6cqw;font-size:1.1cqw;flex:none}
+.native-about-body{position:relative;overflow:auto;min-height:0;flex:1;margin:3cqh 7.8cqw 0;scrollbar-width:thin;scrollbar-color:#ffffff60 transparent;touch-action:pan-y;overscroll-behavior:contain}
+.native-eyebrow,.native-about-columns h3{margin:0;color:#f3d7d4;font-size:1.05cqw;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+.native-about-body h2{margin:1cqh 0 2cqh;font-size:4.7cqw;font-weight:500;letter-spacing:-.04em;line-height:1.15}
+.native-about-intro{display:flex;align-items:center;gap:3cqw;padding-bottom:3cqh;border-bottom:1px solid #ffffff26}
+.native-about-intro p{margin:0;font-size:1.8cqw;line-height:1.45;color:var(--native-muted);flex:1}
+.native-resume{flex:none;background:#fff5f1;color:#26090f;border-radius:5cqw;padding:1.6cqh 2cqw;font-size:1.1cqw!important;font-weight:600!important}
+.native-about-columns{display:grid;grid-template-columns:1.2fr 1fr;gap:6cqw;margin-top:4cqh}
+.native-about-columns h3{margin:0 0 3cqh}
+.native-about-columns article{margin-bottom:2.4cqh}
+.native-about-columns h4{margin:0 0 .8cqh;font-size:1.5cqw;font-weight:500}
+.native-about-columns p{margin:0;font-size:1.25cqw;line-height:1.4;color:var(--native-muted)}
+.native-about-columns ul{list-style:none;padding:0;margin:0}
+.native-about-columns li{border-left:.25cqw solid #f3d7d480;padding-left:1.2cqw;margin-bottom:3cqh;font-size:1.5cqw;line-height:1.5}
+.native-about-waves{position:absolute;inset:0;pointer-events:none}
+.native-about-waves img{position:absolute;width:100%;height:16cqh;object-fit:fill;top:70%}
+.native-about-waves img:nth-child(2){top:74%;height:12cqh}
+.native-about-waves img:nth-child(3){top:75%;height:11cqh}
+.native-about .native-footer{font-size:1.1cqw;position:relative;min-height:9cqh}
+.native-about .native-footer nav button{padding:.8cqh 1.5cqw}
+.native-about.native-persona5 .native-about-body h2{font-family:Anton,Impact,sans-serif;text-transform:uppercase;color:white;background:#e5191c;width:fit-content;padding:0 1cqw}
+.native-about.native-gta .native-about-body h2{color:#ec6fae}
+.native-about.native-bo2 .native-eyebrow,.native-about.native-bo2 h3{color:#f47b20}
+.native-about.native-persona5 .native-about-waves,.native-about.native-gta .native-about-waves,.native-about.native-bo2 .native-about-waves{display:none}
+@media(prefers-reduced-motion:reduce){.native-screen *{scroll-behavior:auto!important}}
+
+.native-about-status span{display:flex;align-items:center;gap:.8cqw}
+.native-about-status img{width:1.8cqw;height:3cqh;object-fit:contain}
+.native-about-status span:last-child img{width:2.4cqw}

@@ -6,6 +6,7 @@ import {earnedTrophies} from '../trophies';
 import {SETTINGS, currentItem, itemLabel, itemSub} from './state';
 import {themeColors} from './themes';
 import {ROUNDS} from './game';
+import {drawAboutPage} from './aboutPage';
 
 // The XMB is laid out in PSP-sized logical units and drawn at 2× into a canvas that textures the screen mesh.
 // Cache the menu and page overlay separately so animated menu labels stay beneath the incoming page.
@@ -36,8 +37,6 @@ const FACE={triangle:'#4fd1a5',circle:'#ff6b72',cross:'#7eb4ff',square:'#f39ad6'
 const TILE=40, TILE_GAP=8, TILE_Y=146, HURRY=1500;
 // A right button pops its tile for HIT_FOR ms: it swells and settles, and a ring in the button's colour spreads out.
 const HIT_FOR=380;
-// The title card's key legend, in the order the buttons are shown.
-const LEGEND=[['up','↑ W'],['right','→ D'],['down','↓ S'],['left','← A'],['triangle','I'],['square','J'],['cross','K X'],['circle','L O']];
 
 const waves=[
  {y:172,amp:18,len:.008,speed:.22,width:42,alpha:.06},
@@ -97,6 +96,7 @@ export function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
   else if(block.type==='image'){
    if(block.align==='left'||block.align==='right'){
     clear();
+    if(i)y+=12; // Separate a new image-and-text section from the preceding content.
     const w=Math.min(block.width??72,width/2), h=block.height??w;
     ops.push({image:true,src:block.src,x:block.align==='right'?width-w:0,y,w,h,fit:block.fit??'contain',align:block.align});
     float={side:block.align,w,bottom:y+h};floated=true;
@@ -283,7 +283,7 @@ export class XmbRenderer{
   const menu=clamp01((booted-.7)/.6), overlay=Math.max(shown.detail,shown.photo,shown.game), start=shown.start;
   const progress=1-start, startAlpha=clamp01(1-progress/TEXT_FADE_OUT);
   const pageAlpha=clamp01((progress-TEXT_FADE_IN)/(1-TEXT_FADE_IN));
-  this.status(menu);
+  if(!(shown.detail>0&&currentItem(state)?.detail?.layout==='about'))this.status(menu);
   if(startAlpha>0)this.startScreen(menu*startAlpha,!state.started);
   this.menu(menu*(1-overlay)*pageAlpha,state.started&&state.view==='menu');
   this.folder(menu*(1-overlay)*pageAlpha,state.started&&state.view==='folder');
@@ -517,8 +517,17 @@ export class XmbRenderer{
   if(hit)this.hits.push({x:x-18,y:y-ROW_H/2,w:SCREEN_W-x+18,h:ROW_H,action:hit});
  }
  detail(alpha,interactive){
+  if(this.nativeDetails)return; // The HTML experiment owns detail content and pointer targets.
   const ctx=this.ctx, state=this.state, item=categories[state.cat].items[state.item[state.cat]], {title,links=[]}=item.detail??{};
   if(!title)return;
+  if(item.detail.layout==='about'){
+   if(!this.aboutFontRequested){
+    this.aboutFontRequested=true;
+    document.fonts?.load('500 60px Inter').then(()=>{this.dirty=true;this.poke();},()=>{});
+   }
+   drawAboutPage(this,item.detail,alpha,interactive,SCREEN_W,SCREEN_H);
+   return;
+  }
   ctx.globalAlpha=alpha;ctx.fillStyle=this.p5?'rgba(12,0,0,.72)':'rgba(0,0,0,.5)';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
   if(this.p5){ctx.fillStyle=P5_RED;ctx.beginPath();ctx.moveTo(0,14);ctx.lineTo(SCREEN_W*.62,10);ctx.lineTo(SCREEN_W*.58,50);ctx.lineTo(0,52);ctx.closePath();ctx.fill();}
   ctx.strokeStyle=BRIGHT;this.shadow(3);drawIcon(ctx,item.icon,38,34,22);
@@ -649,16 +658,7 @@ export class XmbRenderer{
   const big=size=>this.p5?`${size+4}px ${P5_FONT}`:`bold ${size}px ${FONT}`;
   this.shadow(2);
   if(game.status==='title'){
-   centre('Press the buttons shown, in order.',104,`11px ${FONT}`);
-   const step=40, x0=SCREEN_W/2-step*(LEGEND.length-1)/2;
-   LEGEND.forEach(([button,key],i)=>{
-    const x=x0+i*step;
-    ctx.beginPath();ctx.roundRect(x-13,147,26,26,6);ctx.fillStyle='rgba(0,0,0,.4)';ctx.fill();
-    ctx.lineWidth=.8;ctx.strokeStyle='rgba(255,255,255,.4)';ctx.stroke();
-    this.glyph(button,x,160,7);
-    ctx.font=`8.5px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.fillText(key,x,186);
-   });
-   centre('Click the PSP\'s buttons or use the keys',208,`8.5px ${FONT}`,'rgba(255,255,255,.6)');
+   this.controlsGuide();
   }
   else if(game.status==='ready'||game.status==='play'){
    const left=game.status==='play'?Math.max(0,game.endsAt-now):round.time, hurry=left<HURRY;
@@ -687,6 +687,70 @@ export class XmbRenderer{
   ctx.globalAlpha=alpha;
   this.hint({title:'✕ Start   ○ Back',lost:'✕ Retry   ○ Back',won:'✕ Play again   ○ Back'}[game.status]??'Home  Quit',interactive);
   ctx.globalAlpha=1;
+ }
+ // Keyboard clusters mirror the physical PSP controls. Drawn in logical screen units so the guide
+ // stays crisp on the screen texture and shares the active skin without downloading an image.
+ controlsGuide(){
+  const ctx=this.ctx;
+  ctx.save();this.noShadow();
+  const accent=this.p5?P5_RED:this.bo2?BO2_ORANGE:this.gta?'#ec6fae':themeColors(this.state.theme)[0];
+  const edge=this.p5?BRIGHT:this.bo2?BO2_ORANGE:this.gta?'#76d9ec':'#b4cce2';
+  const angular=this.p5||this.bo2;
+  const box=(x,y,w,h,r=5)=>{
+   ctx.beginPath();
+   if(angular){
+    const cut=this.p5?5:3;
+    ctx.moveTo(x+cut,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+h-cut);
+    ctx.lineTo(x+w-cut,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+cut);ctx.closePath();
+   }else ctx.roundRect(x,y,w,h,r);
+  };
+  const label=(text,x,y,size=9,color=BRIGHT)=>{
+   ctx.font=this.p5?`${size+2}px ${P5_FONT}`:`bold ${size}px ${FONT}`;
+   ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+  };
+  label('MATCH THE SEQUENCE. BEAT THE CLOCK.',240,71,9);
+  box(24,86,432,126,12);ctx.fillStyle=this.p5?'rgba(0,0,0,.85)':'rgba(8,13,22,.68)';ctx.fill();
+  ctx.lineWidth=this.p5?1.5:.8;ctx.strokeStyle=edge;ctx.stroke();
+  // A small inset title breaks the top rule, like a console's control diagram.
+  box(196,80,88,15,3);ctx.fillStyle=accent;ctx.fill();label('CONTROLS',240,88,8.5);
+  ctx.fillStyle=this.gta?'#ec6fae':accent;ctx.fillRect(239.5,104,1,91);
+  const key=(text,x,y)=>{
+   box(x-10,y-10,20,20,4);
+   const fill=ctx.createLinearGradient(x,y-10,x,y+10);
+   fill.addColorStop(0,this.p5?'#3b1115':'#283444');fill.addColorStop(1,'#0b1019');
+   ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=1;ctx.stroke();
+   label(text,x,y+.5,12);
+  };
+  // Inverted-T keyboard arrangements, with the same top / left / bottom / right mapping as the PSP.
+  const keyboard=(x,letters)=>{
+   key(letters[0],x,124);
+   letters.slice(1).forEach((letter,i)=>key(letter,x+(i-1)*23,147));
+  };
+  keyboard(76,['W','A','S','D']);keyboard(292,['I','J','K','L']);
+  label('=',122,139,16,edge);label('=',338,139,16,edge);
+  // One continuous D-pad outline, with four directional arrows.
+  const x=180,y=139,arm=12,reach=28;
+  ctx.beginPath();ctx.moveTo(x-arm,y-reach);ctx.lineTo(x+arm,y-reach);
+  ctx.lineTo(x+arm,y-arm);ctx.lineTo(x+reach,y-arm);ctx.lineTo(x+reach,y+arm);
+  ctx.lineTo(x+arm,y+arm);ctx.lineTo(x+arm,y+reach);ctx.lineTo(x-arm,y+reach);
+  ctx.lineTo(x-arm,y+arm);ctx.lineTo(x-reach,y+arm);ctx.lineTo(x-reach,y-arm);
+  ctx.lineTo(x-arm,y-arm);ctx.closePath();
+  ctx.fillStyle='#111b28';ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=1.2;ctx.stroke();
+  [['up',0,-18],['left',-18,0],['down',0,18],['right',18,0]].forEach(([button,dx,dy])=>this.glyph(button,x+dx,y+dy,5));
+  // The face buttons keep their recognisable colours in every skin, as in the live game.
+  [['triangle',0,-22],['square',-22,0],['cross',0,22],['circle',22,0]].forEach(([button,dx,dy])=>{
+   const x=396+dx,y=139+dy;
+   ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fillStyle='#101824';ctx.fill();
+   ctx.strokeStyle=edge;ctx.lineWidth=.9;ctx.stroke();this.glyph(button,x,y,6);
+  });
+  const badge=(text,x)=>{
+   box(x-48,184,96,17,4);ctx.fillStyle=accent;ctx.globalAlpha*=.25;ctx.fill();
+   ctx.globalAlpha/= .25;ctx.strokeStyle=edge;ctx.lineWidth=.7;ctx.stroke();label(text,x,192.5,8);
+  };
+  badge('DIRECTION',132);badge('FACE BUTTONS',348);
+  ctx.font=`8px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';
+  ctx.fillText('Arrow keys also work · X / O = K / L · Or click the PSP buttons',240,228);
+  ctx.restore();
  }
  // A row of sequence tiles centred on y: done ones dimmed, the next one lit and a little larger. hit (0→1) is how far
  // the last right button's pop has played: its tile swells and fades back, and a ring in its colour spreads out.

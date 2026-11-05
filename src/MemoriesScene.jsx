@@ -6,12 +6,13 @@ import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {applyLighting} from './lighting';
 import {XmbRenderer} from './xmb/XmbRenderer';
+import NativeScreen from './xmb/NativeScreen';
+import {screenTransform} from './xmb/screenProjection';
 import {addFaceButtons, attachScreenInput, keyAction} from './xmb/input';
 import {createButtonGlow} from './xmb/buttonGlow';
 import {PHONE, ROTATION_LOCKED, stageInsets} from './layout';
 import {MODEL_URL, loadModelBytes} from './modelAsset';
 import {DURATION, REST, SKIN_AT, easeInOut, pose, transitionKind} from './experiences/transitions';
-import {experiences} from './xmb/themes';
 
 // Built by `npm run model:optimize` (meshopt geometry, KTX2 textures). Vite bundles the Basis transcoder that
 // KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
@@ -22,12 +23,12 @@ const PHONE_FILL={w:.96,h:.84};
 // Page wheel: 40px of scrolling is one step, a pause resets the count and steps are spaced so trackpad momentum
 // doesn't race through the menu.
 const WHEEL_STEP=40, WHEEL_RESET=200, WHEEL_GAP=140;
-// focus 'read' (a page worth reading is open) makes a wheel experience give up its strip, and the PSP glides back to
-// the big Classic framing over GLIDE ms. focus 'game' (Button Rush) does the same in every experience, but lets the PSP
-// fill the page.
+// Reading pages and Button Rush hide the wheel and glide to the same enlarged framing
+// over GLIDE ms in every experience.
+const NATIVE_SCREEN=typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('screen')!=='canvas';
 const GLIDE=650;
-const FOCUS_FILL={read:experiences.classic.fill,game:{w:.94,h:.86}};
-const framing=(experience,focus)=>focus?{...experience,wheel:false,fill:FOCUS_FILL[focus]}:experience;
+const FOCUS_FILL={w:.94,h:.86};
+const framing=(experience,focus)=>focus?{...experience,wheel:false,fill:FOCUS_FILL}:experience;
 
 // children are page layers drawn behind the PSP (e.g. an experience's backdrop); the WebGL canvas sits above them.
 export default function MemoriesScene({lightMode='golden',reset,xmbState,experience,focus=false,onXmbAction,onStatus,onProgress,children}) {
@@ -36,7 +37,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
  const xmbActionRef=useRef(onXmbAction);xmbActionRef.current=onXmbAction;
  const experienceRef=useRef(experience);experienceRef.current=experience;
  const focusRef=useRef(focus);focusRef.current=focus;
- const host=useRef(null), api=useRef(null);
+ const host=useRef(null), api=useRef(null), nativeScreen=useRef(null);
  useEffect(()=>{api.current?.reset();},[reset]);
  useEffect(()=>{api.current?.lighting(lightMode);},[lightMode]);
  useEffect(()=>{api.current?.xmb(xmbState);},[xmbState]);
@@ -44,7 +45,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
  useEffect(()=>{api.current?.focus(focus);},[focus]);
  useEffect(()=>{
   const element=host.current;
-  let renderer, disposed=false, loop=0, input=null, glow=null;
+  let renderer, disposed=false, loop=0, input=null, glow=null, screenMesh=null, screenCorners=null;
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch{onStatus('error');return;}
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -71,7 +72,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   scene.environment=environment.texture;scene.environmentIntensity=.55;pmrem.dispose();studio.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
   applyLighting(lightModeRef.current,'memories',lightRig);
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-  const xmb=new XmbRenderer(reduced);xmb.setState(xmbStateRef.current);xmb.setSkin(experienceRef.current.screen);
+  const xmb=new XmbRenderer(reduced);xmb.nativeDetails=NATIVE_SCREEN;xmb.setState(xmbStateRef.current);xmb.setSkin(experienceRef.current.screen);
   // The model hangs off rig, which the experience transitions shake, flip and scale. frame mixes the camera framing
   // of the experience being left with the one being entered.
   const rig=new THREE.Group();scene.add(rig);
@@ -80,7 +81,14 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   // origin (where the action came from, as a world point) is unused for now; the saved pulse effect needs it.
   // The new state goes straight to the screen, so a key or tap shows on the next frame rather than after React's
   // commit and effects (which then hand over the same state again).
-  const act=(action,origin)=>{const next=xmbActionRef.current?.({...action,maxScroll:xmb.maxScroll});if(next)xmb.setState(next);};
+  const act=(action,origin)=>{
+   if(NATIVE_SCREEN&&xmb.state.view==='detail'&&['UP','DOWN','NEXT','PREV'].includes(action.type)){
+    const body=nativeScreen.current?.querySelector('[data-screen-scroll]');
+    body?.scrollBy({top:(['UP','PREV'].includes(action.type)?-1:1)*Math.max(18,body.clientWidth*.065)});
+    return;
+   }
+   const next=xmbActionRef.current?.({...action,maxScroll:xmb.maxScroll});if(next)xmb.setState(next);
+  };
   // One loop renders camera moves as they happen; the XMB decides when its texture is due (30 fps active, 12 idle).
   let needsRender=true;
   const render=()=>{needsRender=true;};
@@ -88,10 +96,27 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
    loop=requestAnimationFrame(animate);
    if(transition)step(now);
    else if(glide)slide(now);
-   if(xmb.tick(now))needsRender=true;
-   if(needsRender&&!disposed){needsRender=false;renderer.render(scene,camera);}
+   const nativeSettled=NATIVE_SCREEN&&xmb.state.view==='detail'&&xmb.shown.detail===1&&!xmb.dirty&&!xmb.moving;
+   if(!nativeSettled&&xmb.tick(now))needsRender=true;
+   if(needsRender&&!disposed){needsRender=false;renderer.render(scene,camera);positionNativeScreen();}
   }
   loop=requestAnimationFrame(animate);
+  function positionNativeScreen(){
+   const node=nativeScreen.current;
+   if(!node)return;
+   if(!NATIVE_SCREEN||xmb.state.view!=='detail'||!screenMesh||!screenCorners){node.style.visibility='hidden';return;}
+   const width=element.clientWidth,height=element.clientHeight;
+   const points=screenCorners.map(point=>{
+    const p=point.clone().applyMatrix4(screenMesh.matrixWorld).project(camera);
+    return {x:(p.x+1)*width/2,y:(1-p.y)*height/2,z:p.z};
+   });
+   const transform=screenTransform(points);
+   if(!transform){node.style.visibility='hidden';return;}
+   node.style.width=`${transform.width}px`;node.style.height=`${transform.height}px`;
+   node.style.transform=`matrix3d(${transform.matrix.join(',')})`;
+   node.style.opacity=String(xmb.shown.detail);
+   node.style.visibility='visible';
+  }
   // Frames the PSP in the area the page wheel leaves free, mixing between two experiences mid-transition. The view
   // offset slides it into the middle of that area, so shrinking it aside is just this framing changing.
   function resetView(){
@@ -138,7 +163,10 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
    glide=null;frame={from:framing(from,focused),to:framing(next,focused),mix:0};transition={kind,start:performance.now(),skinned:false};
   }
   function key(e){
-   if((e.target!==renderer.domElement&&e.target!==document.body)||e.altKey||e.ctrlKey||e.metaKey)return;
+   const inNative=NATIVE_SCREEN&&nativeScreen.current?.contains(e.target);
+   if((e.target!==renderer.domElement&&e.target!==document.body&&!inNative)||e.altKey||e.ctrlKey||e.metaKey)return;
+   // Native buttons retain Enter/Space activation and Tab focus; PSP navigation still works from the page.
+   if(inNative&&(e.key==='Enter'||e.key===' '))return;
    if(ROTATION_LOCKED||!e.shiftKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
     const action=keyAction(e.key);
     // Held keys repeat menu moves, but never count as more button presses in the game.
@@ -150,7 +178,7 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   // Scrolling anywhere on the page walks the menu (NEXT/PREV), once the PSP is on screen.
   let wheelTotal=0, wheelAt=0, stepAt=0;
   function wheel(e){
-   if(!input||e.ctrlKey||document.querySelector('dialog[open]'))return;
+   if(!input||e.ctrlKey||document.querySelector('dialog[open]')||(NATIVE_SCREEN&&nativeScreen.current?.contains(e.target)))return;
    e.preventDefault();
    const now=performance.now();
    if(now-wheelAt>WHEEL_RESET)wheelTotal=0;
@@ -175,6 +203,17 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
    // The Blender export already fills 0–1 with U right and V up.
    const screen=gltf.scene.getObjectByName('screen_low');
    if(screen){
+    screenMesh=screen;
+    // Find each corner by UV, independent of the model's local orientation and vertex order.
+    const uv=screen.geometry.attributes.uv,positions=screen.geometry.attributes.position;
+    screenCorners=[[0,1],[1,1],[1,0],[0,0]].map(([u,v])=>{
+     let nearest=0,distance=Infinity;
+     for(let i=0;i<uv.count;i++){
+      const d=(uv.getX(i)-u)**2+(uv.getY(i)-v)**2;
+      if(d<distance){nearest=i;distance=d;}
+     }
+     return new THREE.Vector3().fromBufferAttribute(positions,nearest);
+    });
     xmb.texture.anisotropy=renderer.capabilities.getMaxAnisotropy();
     // Emissive so the menu glows at its true colours, while the glossy surface still catches reflections.
     screen.material.dispose();
@@ -190,5 +229,5 @@ export default function MemoriesScene({lightMode='golden',reset,xmbState,experie
   resetView();
   return()=>{disposed=true;cancelAnimationFrame(loop);input?.dispose();glow?.dispose();xmb.dispose();api.current=null;resize.disconnect();controls.dispose();removeEventListener('keydown',key);removeEventListener('wheel',wheel);renderer.domElement.removeEventListener('webglcontextlost',lost);disposeModel(scene);environment.dispose();ktx2.dispose();renderer.dispose();renderer.domElement.remove();};
  },[onStatus,onProgress]);
- return <div className={`memories-stage${ROTATION_LOCKED?' rotation-locked':''}`} ref={host}>{children}</div>;
+ return <div className={`memories-stage${ROTATION_LOCKED?' rotation-locked':''}`} ref={host}>{children}<NativeScreen ref={nativeScreen} state={xmbState} experience={experience} onAction={onXmbAction} enabled={NATIVE_SCREEN}/></div>;
 }
