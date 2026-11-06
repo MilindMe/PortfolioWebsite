@@ -11,7 +11,7 @@ Where every piece of text, link, image and setting lives, and how to change it. 
 | `themeItem`, `RESUME_URL`, `RESUME_FILE` and `resume` at the top | Settings, the résumé buttons and the quick links use them. |
 | The **Settings** category exactly as it is (the `classics` folder plus `...themes.filter(...)`) | It's built from `themes.js`. Hand-writing it loses the Classics folder. |
 | The ids `bio`, `button-rush`, `github`, `linkedin`, `email`, `resume` | The name in the corner opens `bio`, the quick links read `github` and `linkedin`, and Button Rush is opened by `game:'button-rush'`. |
-| `focus:true` on project, About me and Experience pages | It marks them as reading pages: the game themes tuck their wheel away and the PSP grows back while they're open. |
+| `focus:true` on project and About pages | It marks them as reading pages: every theme enlarges the PSP to the same size as Button Rush and tucks any navigation wheel away while they're open. |
 | `blocks:[...]` on About me and Experience | That's the laid-out page format (headings, bullets, timeline). A plain `body` works too, but loses the layout. |
 
 If you paste an older copy of the file over it, compare it with `git diff` first. That's how the Classics folder went missing once.
@@ -35,6 +35,10 @@ If you paste an older copy of the file over it, compare it with `git diff` first
 `content.js` → the `about` category.
 
 - **About me** (`bio`), **Experience** and **Education** use `blocks` (see [Page blocks](#page-blocks)).
+- **About me** uses a full-width heading and paragraphs; **Experience** uses a `timeline` with `layout:'grid'` for the period / role rows. Both use the standard detail renderer, theme styling and scrolling.
+- `linksPosition:'header'` places page actions at the top right; otherwise they sit at the bottom. `detail.icon` can override the menu icon, as Experience does with `terminal`.
+- `presentation:'editorial'` uses the same canvas renderer with a larger introduction, Inter typography, compact status bar, and vertical list markers. About Me uses this presentation; its `intro` appears above the content columns and its résumé action sits beside that introduction. `pageLabel` supplies the small top-left label. `bodyStyle` can set `bodySize`, `bodyLineH`, and `blockGap` for longer prose while retaining automatic wrapping.
+- `backgroundImages:[{src,x,y,w,h}]` adds cached decorative images behind page content, in the screen’s 480 × 270 logical units. A link can include `trailingIcon:'link'` for an arrow after its label.
 - **Skills** uses a plain `body`. `\n` starts a new line.
 
 ### Page blocks
@@ -45,10 +49,12 @@ Any `detail` can use `blocks:[...]` instead of `body`. They stack top to bottom,
 | `{type:'h', text}` | A heading in capitals, with a short underline |
 | `{type:'p', text}` | A paragraph |
 | `{type:'list', items:['...', '...']}` | Bullet points |
+| `{type:'columns', gap:24, items:[{blocks:[...]}, {blocks:[...]}]}` | Content columns; equal-width by default, or proportional to each item’s optional `weight`. Each column uses the same page blocks and text wrapping. |
+| `{type:'timeline', layout:'grid', entries:[...]}` | Period / role rows, sized to their contents and scrolled with the rest of the page. |
 | `{type:'timeline', entries:[{when, role, org, points:[...], current}]}` | The Experience timeline; `current:true` lights the dot |
 | `{type:'image', src, alt, align:'right', width}` | A picture floated to the `right` (or `left`). The blocks after it wrap beside it until they pass its bottom. `width` is in screen units (the page is about 412 wide); `height` defaults to the same, for a square. It's fitted whole, never cropped, so logos work well. |
 | `{type:'image', src, alt, height, caption}` | No `align`: a full-width banner, cropped to fill `height` (default 165), with an optional caption under it |
-| `{type:'grid', columns:2, items:[{image, alt, title, text}]}` | Cards in columns, each with an optional picture on top (cropped to fill), a bold title and a short line. Cards in a row share a height. `imageHeight` overrides the picture height. |
+| `{type:'grid', columns:2, items:[{image, alt, title, text}]}` | Cards in columns, each with an optional picture on top (cropped to fill), a bold title and a short line. Cards in a row share a height. `variant:'plain'` removes the card surfaces and padding. `imageHeight` overrides the picture height. |
 
 Education is the worked example: the university seal floated right, beside a heading and two lines.
 

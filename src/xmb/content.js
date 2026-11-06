@@ -62,19 +62,25 @@ export const categories = [
   id:'about', label:'About', icon:'user',
   items:[
    {id:'bio', label:'About me', sub:'Who I am', icon:'resume',
-    detail:{title:'Hi, I\'m Milind', sub:'Software Engineer', focus:true, blocks:[
-     {type:'p', text:'I\'m a developer with a passion for developing software that is fun, creative and useful.'},
+    detail:{title:'Hi, I\'m Milind', sub:'Software Engineer', focus:true, presentation:'editorial', pageLabel:'About me',
+     intro:'I’m a developer and AI engineer, with a taste for Design and UX',
+     bodyStyle:{bodySize:8,bodyLineH:10.5,blockGap:4},
+     backgroundImages:[
+      {src:'/about/ambient-wave.svg',x:0,y:202,w:480,h:46.5},
+      {src:'/about/wave-ribbon.svg',x:0,y:214,w:480,h:35.25},
+      {src:'/about/wave-edge.svg',x:0,y:216,w:480,h:31.875},
+     ], blocks:[
      {type:'h', text:'What I do'},
-     {type:'p', text:'Build Generative AI applications to automate workflows, android development in Kotlin, production grade web-apps in React.'},
-     {type:'h', text:'What I care about'},
-     {type:'list', items:['User Experience', 'Shaping a product for the audience, not the developer', 'Shipping, learning and iterating']},
-     {type:'h', text:'Outside of work'},
-     {type:'p', text:'Music! In my free time, I play guitar, make music, and listen to Led Zeppelin!'},
-    ], links:[resume]}},
+     {type:'p', text:'I’m a Software Engineer and a student at the University of Waterloo.'},
+     {type:'p', text:'The work i’m most passionate about are often projects that start from silly, scrappy ideas. I bring products from zero to one, roll out proof of concepts fast and carry them all the way to production.'},
+     {type:'p', text:'I’ve been a software engineer in various fields; Consulting, Healthcare/BioTech and Telecommunications.\nIn all of them, I dedicate my time and effort into finding solutions to redundant and boring tasks. I’m the engineer who fixes problems no one realised they could have a solution to.'},
+     {type:'p', text:'I keep UX at the heart of all my development.'},
+     {type:'p', text:'Software should be useful but also clean and engaging. With AI having reshaped the way we think about code, I find it important to put taste and UX research at the forefront.'},
+    ], links:[{...resume,trailingIcon:'link'}]}},
 
    {id:'experience', label:'Work Experience', icon:'briefcase',
-    detail:{title:'Experience', sub:'Most recent first', focus:true, blocks:[
-     {type:'timeline', entries:[
+    detail:{title:'Experience', sub:'Most recent first', focus:true, icon:'terminal', linksPosition:'header', blocks:[
+     {type:'timeline', layout:'grid', entries:[
       {when:'Sept 2026 – Dec 2026', role:'Software Developer', org:'TextNow – Incoming'},
       {when:'Jan 2026 – Apr 2026', role:'Full Stack AI Developer', org:'Revvity'},
       {when:'May 2025 – Aug 2025', role:'Software Engineer', org:'BDO IT Consulting'},
@@ -84,14 +90,18 @@ export const categories = [
     ], links:[resume]}},
 
    {id:'skills', label:'Skills', sub:'Languages & tools', icon:'wrench',
-    detail:{title:'Skills', body:'Languages: Go, C, C#, TypeScript, Kotlin, Python\nFrameworks & Libraries: React, React Native, Angular, PyTorch, Langchain, LangGraph\nTools: Git, CI/CD, Figma'}},
+    detail:{title:'Skills', focus:true, body:'Languages: Go, C, C#, TypeScript, Kotlin, Python\nFrameworks & Libraries: React, React Native, Angular, PyTorch, Langchain, LangGraph\nTools: Git, CI/CD, Figma'}},
 
    {id:'education', label:'Education', sub:'Studies', icon:'education',
-    detail:{title:'Education', blocks:[
+    detail:{title:'Education', focus:true, blocks:[
      {type:'image', src:'/education/uw-seal.webp', alt:'University of Waterloo seal', align:'right', width:76},
      {type:'h', text:'University of Waterloo'},
      {type:'p', text:'Combinatorics & Optimization + Statistics'},
      {type:'p', text:'Minor in Computing'},
+     {type:'p', text:''},
+    //  {type:'image', src:'/education/college-du-saint-esprit.png', alt:'College Du Saint Esprit crest', align:'right', width:76},
+    //  {type:'h', text:'College Du Saint Esprit'},
+    //  {type:'p', text:'Cambridge A-levels, Cambridge O-levels'},
     ]}},
   ],
  },

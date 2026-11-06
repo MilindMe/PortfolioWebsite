@@ -16,11 +16,12 @@ function gameText({status,round,seq,pos}){
 
 // A detail page as plain text: its body, or its blocks flattened in reading order.
 function pageText(detail){
- if(!detail.blocks)return detail.body;
- return detail.blocks.map(block=>block.type==='list'?block.items.join('. '):block.type==='timeline'
+ if(!detail.blocks)return [detail.intro,detail.body].filter(Boolean).join('. ');
+ const body=detail.blocks.map(block=>block.type==='columns'?block.items.map(pageText).join('. '):block.type==='list'?block.items.join('. '):block.type==='timeline'
   ?block.entries.map(entry=>[entry.role,entry.org,entry.when,...(entry.points??[])].filter(Boolean).join(', ')).join('. ')
   :block.type==='grid'?block.items.map(item=>[item.title,item.text].filter(Boolean).join(', ')).join('. ')
   :block.type==='image'?block.caption??'':block.text).filter(Boolean).join('. ');
+ return [detail.intro,body].filter(Boolean).join('. ');
 }
 
 function announcement(state){

@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="1280" height="124" viewBox="0 0 1280 124" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path id="Ambient wave" d="M0 40.0125C260 -21.3936 395 -9.88 625 59.2019C880 135.96 1040 89.905 1280 28.4988V63.0398C1020 129.819 850 151.311 620 78.3913C385 9.30942 220 20.8231 0 66.8777V40.0125Z" fill="url(#paint0_linear_0_17)"/>
+<defs>
+<linearGradient id="paint0_linear_0_17" x1="0" y1="-9.25954e-07" x2="0" y2="124" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E6A9B2" stop-opacity="0.0509804"/>
+<stop offset="0.5" stop-color="#E6A9B2" stop-opacity="0.109804"/>
+<stop offset="1" stop-color="#E6A9B2" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>

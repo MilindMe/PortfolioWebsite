@@ -130,15 +130,37 @@ for(const skin of ['gta','bo2'])test(`the ${skin} skin keeps the PSP skin's hit 
  xmb.dispose();
 });
 
-test('laid-out pages draw their headings and timeline, and scroll when long',t=>{
+test('About and Experience draw their content and résumé action',t=>{
+ const previousImage=globalThis.Image;globalThis.Image=class {};
+ t.after(()=>{if(previousImage===undefined)delete globalThis.Image;else globalThis.Image=previousImage;});
  const {xmb,state}=renderer(t);
  // About is the fourth category: About me, then Experience.
  let now=2000;
  const open=item=>{xmb.setState({...state,cat:3,item:state.item.map((value,i)=>i===3?item:value),view:'detail'});xmb.tick(now+=33);xmb.out.events=[];xmb.draw(2,99,true);return xmb.out.events;};
  assert(open(0).includes('WHAT I DO'),JSON.stringify(xmb.out.events));
  const experience=open(1);
- assert(experience.includes('Sept 2026 – Dec 2026')&&experience.includes('Résumé'),JSON.stringify(experience));
+ assert(experience.join(' ').includes('Sept 2026 – Dec 2026')&&experience.includes('Résumé'),JSON.stringify(experience));
  assert(xmb.maxScroll>0);
+ assert(xmb.wrapped.has('experience:xmb'));
+ xmb.dispose();
+});
+
+for(const skin of ['xmb','persona5','gta','bo2'])test(`About uses the shared page layout and controls in ${skin}`,t=>{
+ const previousImage=globalThis.Image;globalThis.Image=class {};
+ t.after(()=>{if(previousImage===undefined)delete globalThis.Image;else globalThis.Image=previousImage;});
+ const {xmb,state}=renderer(t,true);
+ xmb.setSkin(skin);
+ xmb.setState({...state,cat:3,view:'detail'});xmb.tick(2000);
+ assert(xmb.wrapped.has(`bio:${skin}`),'About must use the same cached layout as other detail pages');
+ assert.deepEqual(xmb.hitTest(410,92),{type:'CONFIRM',link:0});
+ assert.deepEqual(xmb.hitTest(430,258),{type:'BACK'});
+ assert.equal(xmb.hitTest(200,120),null,'body text must not open the résumé');
+ for(const label of ['WHAT I DO','Résumé']){
+  assert(xmb.out.events.includes(label),`${label} missing in ${skin}`);
+ }
+ const body=xmb.wrapped.get(`bio:${skin}`).ops.filter(op=>op.text).map(op=>op.text).join(' ');
+ assert(body.includes('silly, scrappy ideas'));assert(body.includes('taste and UX research at the forefront'));
+ assert(xmb.out.events.includes(skin==='persona5'?"HI, I'M MILIND":"Hi, I'm Milind"));
  xmb.dispose();
 });
 
@@ -193,6 +215,31 @@ test('a grid lays cards out in columns with equal heights per row',()=>{
  assert.equal(cards[0].y,cards[1].y);assert(cards[1].x>cards[0].x);assert.equal(cards[0].h,cards[1].h);
  assert(cards[2].y>=cards[0].y+cards[0].h,'the third card starts a new row');
  assert(page.ops.some(op=>op.image&&op.src==='/a.webp'&&op.w===cards[0].w));
+});
+
+test('columns wrap independently and following content clears the tallest column',()=>{
+ const ctx=canvas().getContext('2d');
+ const page=layoutPage(ctx,{blocks:[
+  {type:'columns',gap:12,items:[{body:'One two three four five six seven eight nine ten.'},{body:'Short.'}]},
+  {type:'p',text:'Following content'},
+ ]},160,{accent:'#fff',headFont:'9px sans-serif',headH:12});
+ const short=page.ops.find(op=>op.text==='Short.'),following=page.ops.find(op=>op.text==='Following content');
+ assert.equal(short.y,0);assert.equal(short.x,86);
+ const left=page.ops.filter(op=>op.x===0&&op!==following&&op.y<following.y);
+ assert(left.length>1,'long copy must wrap inside its column');
+ assert(following.y>=Math.max(...left.map(op=>op.y))+13,'the next block must clear both columns');
+});
+
+test('period and role grid rows expand for long roles without overlapping the next entry',()=>{
+ const ctx=canvas().getContext('2d');
+ const page=layoutPage(ctx,{blocks:[{type:'timeline',layout:'grid',entries:[
+  {when:'2026',role:'A long role that needs several lines',org:'An organisation',points:['A detail that also wraps across lines.']},
+  {when:'2025',role:'Next role',org:'Next company'},
+ ]}]},200,{accent:'#fff',headFont:'9px sans-serif',headH:12});
+ const next=page.ops.find(op=>op.text==='2025'),rules=page.ops.filter(op=>op.rule);
+ assert.equal(rules.length,2);assert(next.y>60,'long entry must expand the row');
+ assert(page.ops.filter(op=>op.y<rules[1].y).every(op=>op.y<next.y));
+ assert(page.ops.some(op=>op.text==='Next role'));
 });
 
 test('Education draws the seal once it loads',async t=>{

@@ -13,7 +13,7 @@ test('initial HTML and readable preview contain the shared portfolio without Jav
   const copy=renderPortfolio(), preview=renderPreview();
   assert(html.includes(`<div id="root">${copy}</div>`));
   assert(!html.includes('<!--portfolio-content-->'));
-  for(const text of ['Milind Meetarbhan','TextNow – Incoming','Revvity','BDO IT Consulting','PricewaterhouseCoopers','University of Waterloo','TwoTogether']){
+  for(const text of ['Milind Meetarbhan','TextNow – Incoming','Revvity','BDO IT Consulting','PricewaterhouseCoopers','University of Waterloo','TwoTogether','I’m a developer and AI engineer, with a taste for Design and UX','silly, scrappy ideas','taste and UX research at the forefront']){
    assert(copy.includes(text),text);
    assert(preview.includes(text),text);
   }

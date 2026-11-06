@@ -17,6 +17,7 @@ export const SCREEN_W=480, SCREEN_H=270;
 const MOVING_FRAME=1000/60, ACTIVE_FRAME=32, IDLE_FRAME=80, ACTIVE_FOR=4000;
 const SCALE=2, FONT='"Helvetica Neue", Helvetica, Arial, sans-serif', P5_FONT='Anton, Impact, "Arial Narrow", sans-serif';
 const CAT_X=118, CAT_Y=74, CAT_W=78, ROW_H=34, ITEM_Y=CAT_Y+64, ABOVE_Y=CAT_Y-44;
+const EDITORIAL_FONT='Inter, "Helvetica Neue", Helvetica, Arial, sans-serif';
 const TEXT='#dadada', BRIGHT='#ffffff', P5_RED='#e5191c';
 const BODY_TOP=62, BODY_BOTTOM=222, LINE_H=13, SCROLL_STEP=LINE_H*2;
 // An open folder slides its column this far left and lists its entries this far right of the folder icon.
@@ -36,8 +37,6 @@ const FACE={triangle:'#4fd1a5',circle:'#ff6b72',cross:'#7eb4ff',square:'#f39ad6'
 const TILE=40, TILE_GAP=8, TILE_Y=146, HURRY=1500;
 // A right button pops its tile for HIT_FOR ms: it swells and settles, and a ring in the button's colour spreads out.
 const HIT_FOR=380;
-// The title card's key legend, in the order the buttons are shown.
-const LEGEND=[['up','↑ W'],['right','→ D'],['down','↓ S'],['left','← A'],['triangle','I'],['square','J'],['cross','K X'],['circle','L O']];
 
 const waves=[
  {y:172,amp:18,len:.008,speed:.22,width:42,alpha:.06},
@@ -66,37 +65,50 @@ function wrap(ctx,text,width){
 // top of the body. A plain body is a single paragraph; its line breaks are kept. accent colours headings and the
 // current timeline dot. An image floated left or right sits beside the blocks after it, which wrap line by line in
 // the room left until they pass its bottom; images load later, so every box has a fixed size here.
-export function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
+export function layoutPage(ctx,{body,blocks},width,style){
+ const {accent,headFont,headH}=style;
+ const family=style.fontFamily??FONT, bodySize=style.bodySize??10, bodyLineH=style.bodyLineH??LINE_H;
+ const muted=style.muted??TEXT;
  const ops=[];let y=0, float=null;
  const beside=()=>float&&y<float.bottom?float:null;
  // How far a line starting now is pushed right by a left float, and how much narrower any float makes it.
  const indent=()=>beside()?.side==='left'?beside().w+FLOAT_GAP:0;
  const room=x=>width-x-(beside()?beside().w+FLOAT_GAP:0);
- const text=(value,x,font,color,lineH=LINE_H)=>{
-  ctx.font=font;
+ const text=(value,x,font,color,lineH=bodyLineH,tracking=0)=>{
+  ctx.font=font;ctx.letterSpacing=`${tracking}px`;
   for(const paragraph of value.split('\n')){
    let line='';
-   const flush=()=>{ops.push({text:line,x:x+indent(),y,font,color});y+=lineH;line='';};
+   const flush=()=>{ops.push({text:line,x:x+indent(),y,font,color,tracking});y+=lineH;line='';};
    for(const word of paragraph.split(' ')){
     const next=line?`${line} ${word}`:word;
     if(line&&ctx.measureText(next).width>room(x)){flush();line=word;}else line=next;
    }
    flush();
   }
+  ctx.letterSpacing='0px';
  };
- const bullet=(value,x)=>{ops.push({dot:true,x:x+2+indent(),y:y+5.5,r:1.3,color:TEXT});text(value,x+9,`10px ${FONT}`,TEXT);};
+ // Nested columns and table cells use the same text wrapping and drawing operations as every page.
+ const place=(page,dx,dy)=>page.ops.forEach(op=>ops.push({...op,x:op.x+dx,
+  ...(op.y===undefined?{}:{y:op.y+dy}),...(op.rail?{y1:op.y1+dy,y2:op.y2+dy}:{})}));
+ const bullet=(value,x)=>{
+  if(style.listMarker==='bar')ops.push({rule:true,x:x+indent(),y:y+1,w:1.2,h:9,color:accent});
+  else ops.push({dot:true,x:x+2+indent(),y:y+5.5,r:1.3,color:muted});
+  text(value,x+(style.listMarker==='bar'?7:9),`${bodySize}px ${family}`,style.listColor??muted);
+  y+=style.listGap??0;
+ };
  const clear=()=>{if(float){y=Math.max(y,float.bottom);float=null;}};
  let floated=false;
  (blocks??[{type:'p',text:body??''}]).forEach((block,i)=>{
   // A floated image starts level with whatever follows it, so neither takes the usual gap between blocks.
-  if(i&&!floated&&!(block.type==='image'&&block.align))y+=block.type==='h'?12:6;
+  if(i&&!floated&&!(block.type==='image'&&block.align))y+=block.type==='h'?12:style.blockGap??6;
   floated=false;
-  if(block.type==='h'){text(block.text.toUpperCase(),0,headFont,accent,headH);ops.push({rule:true,x:indent(),y:y,w:24,color:accent});y+=6;}
-  else if(block.type==='p')text(block.text,0,`10px ${FONT}`,TEXT);
+  if(block.type==='h'){text(block.text.toUpperCase(),0,headFont,accent,headH,style.headingTracking??0);if(style.headingRule!==false)ops.push({rule:true,x:indent(),y,w:24,color:accent});y+=6;}
+  else if(block.type==='p')text(block.text,0,`${bodySize}px ${family}`,muted);
   else if(block.type==='list')block.items.forEach(item=>bullet(item,2));
   else if(block.type==='image'){
    if(block.align==='left'||block.align==='right'){
     clear();
+    if(i)y+=12; // Separate a new image-and-text section from the preceding content.
     const w=Math.min(block.width??72,width/2), h=block.height??w;
     ops.push({image:true,src:block.src,x:block.align==='right'?width-w:0,y,w,h,fit:block.fit??'contain',align:block.align});
     float={side:block.align,w,bottom:y+h};floated=true;
@@ -107,6 +119,18 @@ export function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
     if(block.caption){y+=4;text(block.caption,0,`8.5px ${FONT}`,'rgba(255,255,255,.6)',11);}
    }
   }
+  else if(block.type==='columns'){
+   clear();
+   const gap=block.gap??GRID_GAP, available=width-gap*(block.items.length-1);
+   const weight=block.items.reduce((sum,column)=>sum+(column.weight??1),0);
+   let tallest=0,x=0;
+   block.items.forEach(column=>{
+    const columnWidth=available*(column.weight??1)/weight;
+    const page=layoutPage(ctx,column,columnWidth,style);
+    place(page,x,y);tallest=Math.max(tallest,page.height);x+=columnWidth+gap;
+   });
+   y+=tallest;
+  }
   else if(block.type==='grid'){
    clear();
    const columns=block.columns??2, w=(width-GRID_GAP*(columns-1))/columns, imageH=block.imageHeight??Math.round(w*.45);
@@ -114,17 +138,18 @@ export function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
     if(row)y+=GRID_GAP;
     let tallest=0;
     const cards=block.items.slice(row,row+columns).map((item,c)=>{
-     const x=c*(w+GRID_GAP), card={card:true,x,y,w,h:0};ops.push(card);
+     const x=c*(w+GRID_GAP), card={card:true,x,y,w,h:0};if(block.variant!=='plain')ops.push(card);
      let at=y;
      if(item.image){ops.push({image:true,src:item.image,x,y,w,h:imageH,fit:item.fit??'cover',round:6,top:true});at+=imageH;}
-     at+=6;
-     for(const [value,font,color,lineH] of [[item.title,`bold 10px ${FONT}`,BRIGHT,12],[item.text,`8.5px ${FONT}`,TEXT,11]]){
+     const inset=block.variant==='plain'?0:6;
+     at+=inset;
+     for(const [value,font,color,lineH] of [[item.title,style.editorial?`500 9px ${family}`:`bold 10px ${family}`,style.ink??BRIGHT,style.editorial?11:12],[item.text,`${style.editorial?8:8.5}px ${family}`,muted,style.editorial?10:11]]){
       if(!value)continue;
       ctx.font=font;
-      for(const line of wrap(ctx,value,w-12)){ops.push({text:line,x:x+6,y:at,font,color});at+=lineH;}
+      for(const line of wrap(ctx,value,w-inset*2)){ops.push({text:line,x:x+inset,y:at,font,color});at+=lineH;}
       at+=2;
      }
-     tallest=Math.max(tallest,at+4-y);
+     tallest=Math.max(tallest,at+(style.editorial&&block.variant==='plain'?0:4)-y);
      return card;
     });
     cards.forEach(card=>{card.h=tallest;});
@@ -132,6 +157,22 @@ export function layoutPage(ctx,{body,blocks},width,{accent,headFont,headH}){
    }
   }
   else if(block.type==='timeline'){
+   if(block.layout==='grid'){
+    clear();
+    const periodWidth=width*.3, gutter=12, positionX=periodWidth+gutter;
+    text('PERIOD',0,`bold 8px ${FONT}`,accent,12);
+    ops.push({text:'ROLE / COMPANY',x:positionX,y:y-12,font:`bold 8px ${FONT}`,color:accent});
+    y+=4;
+    block.entries.forEach(entry=>{
+     const period=layoutPage(ctx,{body:entry.when},periodWidth-4,style);
+     const position=layoutPage(ctx,{blocks:[{type:'grid',columns:1,variant:'plain',items:[{title:entry.role,text:entry.org}]},
+      ...(entry.points?.length?[{type:'list',items:entry.points}]:[])]},width-positionX,style);
+     const rowHeight=Math.max(period.height,position.height)+12;
+     ops.push({rule:true,x:0,y,w:width,color:'rgba(255,255,255,.25)'});
+     place(period,0,y+6);place(position,positionX,y+6);y+=rowHeight;
+    });
+    return;
+   }
    let previous=null;
    block.entries.forEach((entry,j)=>{
     if(j)y+=12;
@@ -308,6 +349,7 @@ export class XmbRenderer{
     ctx.shadowColor='transparent';ctx.shadowBlur=0;
     ctx.strokeStyle=ctx.fillStyle='#1b1b1f';drawIcon(ctx,p.icon??'link',p.x+12,p.y,10);
     ctx.font=`10px ${FONT}`;ctx.fillText(p.text,p.x+21,p.y+.5);
+    if(p.trailingIcon)drawIcon(ctx,p.trailingIcon,p.x+p.width-11,p.y,8);
    }else{
     ctx.shadowColor=`rgba(255,255,255,${.45+.25*beat})`;ctx.shadowBlur=(4+3*beat)*SCALE;
     ctx.font=p.font;ctx.fillStyle=p.color??BRIGHT;
@@ -402,14 +444,14 @@ export class XmbRenderer{
  }
  shadow(blur=3){const ctx=this.ctx;ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=blur*SCALE;ctx.shadowOffsetX=ctx.shadowOffsetY=SCALE;}
  noShadow(){const ctx=this.ctx;ctx.shadowColor='transparent';ctx.shadowBlur=ctx.shadowOffsetX=ctx.shadowOffsetY=0;}
- status(alpha){
+ status(alpha,compact=false){
   if(alpha<=0)return;
   const ctx=this.ctx, now=new Date();
   const hours=now.getHours()%12||12, label=`${now.getMonth()+1}/${now.getDate()}  ${hours}:${String(now.getMinutes()).padStart(2,'0')} ${now.getHours()<12?'AM':'PM'}`;
-  ctx.globalAlpha=alpha;ctx.font=`10px ${FONT}`;ctx.textBaseline='middle';ctx.textAlign='left';
+  ctx.globalAlpha=alpha;ctx.font=compact?`7px ${EDITORIAL_FONT}`:`10px ${FONT}`;ctx.textBaseline='middle';ctx.textAlign='left';
   const width=ctx.measureText(label).width, x=SCREEN_W-width-44, y=9;
   this.shadow(2);ctx.strokeStyle='rgba(218,218,218,.8)';ctx.lineWidth=.8;
-  ctx.beginPath();ctx.moveTo(SCREEN_W,y);ctx.lineTo(x+3,y);ctx.arcTo(x,y,x,y+3,3);ctx.lineTo(x,y+13);ctx.arcTo(x,y+16,x+3,y+16,3);ctx.lineTo(SCREEN_W,y+16);ctx.stroke();
+  if(!compact){ctx.beginPath();ctx.moveTo(SCREEN_W,y);ctx.lineTo(x+3,y);ctx.arcTo(x,y,x,y+3,3);ctx.lineTo(x,y+13);ctx.arcTo(x,y+16,x+3,y+16,3);ctx.lineTo(SCREEN_W,y+16);ctx.stroke();}
   ctx.fillStyle=TEXT;ctx.fillText(label,x+7,y+8.5);
   const bx=SCREEN_W-30;ctx.strokeRect(bx,y+4.5,17,8);ctx.fillRect(bx+17.5,y+6.5,1.6,4);ctx.fillRect(bx+2,y+6.5,13,4);
   this.noShadow();ctx.globalAlpha=1;
@@ -519,39 +561,91 @@ export class XmbRenderer{
  detail(alpha,interactive){
   const ctx=this.ctx, state=this.state, item=categories[state.cat].items[state.item[state.cat]], {title,links=[]}=item.detail??{};
   if(!title)return;
-  ctx.globalAlpha=alpha;ctx.fillStyle=this.p5?'rgba(12,0,0,.72)':'rgba(0,0,0,.5)';ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
-  if(this.p5){ctx.fillStyle=P5_RED;ctx.beginPath();ctx.moveTo(0,14);ctx.lineTo(SCREEN_W*.62,10);ctx.lineTo(SCREEN_W*.58,50);ctx.lineTo(0,52);ctx.closePath();ctx.fill();}
-  ctx.strokeStyle=BRIGHT;this.shadow(3);drawIcon(ctx,item.icon,38,34,22);
-  ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=BRIGHT;
-  if(this.p5){ctx.font=`18px ${P5_FONT}`;ctx.fillText(title.toUpperCase(),58,30);}
-  else{ctx.font=`bold 15px ${FONT}`;ctx.fillText(title,58,31);}
-  const sub=item.detail.sub??item.sub;
-  if(sub){ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,58,45);}
-  this.noShadow();ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(28,54,SCREEN_W-56,.6);
+  const editorial=item.detail.presentation==='editorial';
+  const ink=editorial&&!this.p5&&!this.gta&&!this.bo2?'#fff5f1':BRIGHT;
+  const muted=editorial?'#dacbce':TEXT;
+  const accent=this.p5?P5_RED:this.bo2?BO2_ORANGE:this.gta&&editorial?'#ec6fae':editorial?'#f3d7d4':BRIGHT;
+  let bodyTop=BODY_TOP, actionY=item.detail.linksPosition==='header'?34:238;
+  ctx.globalAlpha=alpha;
+  if(editorial&&!this.p5&&!this.gta&&!this.bo2){
+   const colors=themeColors(state.theme),crimson=state.theme==='crimson';
+   const gradient=ctx.createLinearGradient(0,0,0,SCREEN_H);
+   gradient.addColorStop(0,crimson?'#642a30':colors[0]);
+   gradient.addColorStop(.52,crimson?'#26090f':colors[1]);
+   gradient.addColorStop(1,crimson?'#17080e':'#080b12');ctx.fillStyle=gradient;
+  }else ctx.fillStyle=this.p5?(editorial?'rgba(12,0,0,.85)':'rgba(12,0,0,.72)'):(editorial?'rgba(0,0,0,.8)':'rgba(0,0,0,.5)');
+  ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
+  for(const image of item.detail.backgroundImages??[])this.pageImage({...image,fit:'contain'},image.x,image.y);
+  if(editorial){
+   if(!this.editorialFontRequested){
+    this.editorialFontRequested=true;
+    document.fonts?.load(`500 24px ${EDITORIAL_FONT}`).then(()=>{this.wrapped.clear();this.dirty=true;this.poke();},()=>{});
+   }
+   this.noShadow();
+   ctx.strokeStyle=ink;drawIcon(ctx,item.detail.icon??item.icon,34,16,11);
+   ctx.font=`500 7.5px ${EDITORIAL_FONT}`;ctx.fillStyle=ink;ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText(item.detail.pageLabel??item.label,45,16);
+   this.status(alpha,true);ctx.globalAlpha=alpha;
+   ctx.textAlign='left';ctx.textBaseline='top';
+   ctx.font=`600 6.8px ${EDITORIAL_FONT}`;ctx.fillStyle=this.p5?ink:accent;ctx.letterSpacing='.9px';ctx.fillText((item.detail.sub??item.sub??'').toUpperCase(),30,36);ctx.letterSpacing='0px';
+   if(this.p5){
+    ctx.fillStyle=P5_RED;ctx.beginPath();ctx.moveTo(27,47);ctx.lineTo(263,43);ctx.lineTo(258,78);ctx.lineTo(25,80);ctx.closePath();ctx.fill();
+   }
+   ctx.fillStyle=this.gta?accent:ink;
+   if(this.p5){
+    // Anton's ink extends above Canvas's 'top' baseline. Fit the actual glyph bounds inside the banner.
+    const heading=title.toUpperCase();ctx.save();ctx.textBaseline='alphabetic';ctx.font=`25px ${P5_FONT}`;
+    const measured=ctx.measureText(heading), inkHeight=(measured.actualBoundingBoxAscent??25)+(measured.actualBoundingBoxDescent??0);
+    const size=25*Math.min(1,220/Math.max(1,measured.width),26/Math.max(1,inkHeight));ctx.font=`${size}px ${P5_FONT}`;
+    const fitted=ctx.measureText(heading), ascent=fitted.actualBoundingBoxAscent??size, descent=fitted.actualBoundingBoxDescent??0;
+    ctx.fillText(heading,34,49+ascent+(26-ascent-descent)/2);ctx.restore();
+   }else{
+    ctx.font=`500 24px ${EDITORIAL_FONT}`;ctx.fillText(title,30,47);
+   }
+   ctx.font=`9px ${EDITORIAL_FONT}`;ctx.fillStyle=muted;
+   const intro=wrap(ctx,item.detail.intro??'',318);let introBottom=81;
+   for(const line of intro){ctx.fillText(line,30,introBottom);introBottom+=11;}
+   actionY=introBottom-10; // Align the button bottom with the introduction’s last line box.
+   const divider=introBottom+7;ctx.fillStyle='rgba(255,255,255,.16)';ctx.fillRect(30,divider,412,.5);bodyTop=divider+10;
+  }else{
+   if(this.p5){ctx.fillStyle=P5_RED;ctx.beginPath();ctx.moveTo(0,14);ctx.lineTo(SCREEN_W*.62,10);ctx.lineTo(SCREEN_W*.58,50);ctx.lineTo(0,52);ctx.closePath();ctx.fill();}
+   ctx.strokeStyle=BRIGHT;this.shadow(3);drawIcon(ctx,item.detail.icon??item.icon,38,34,22);
+   ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=BRIGHT;
+   if(this.p5){ctx.font=`18px ${P5_FONT}`;ctx.fillText(title.toUpperCase(),58,30);}
+   else{ctx.font=`bold 15px ${FONT}`;ctx.fillText(title,58,31);}
+   const sub=item.detail.sub??item.sub;
+   if(sub){ctx.fillStyle=TEXT;ctx.font=`8.5px ${FONT}`;ctx.fillText(sub,58,45);}
+   this.noShadow();ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(28,54,SCREEN_W-56,.6);
+  }
   const key=`${item.id}:${this.skin}`;
   if(!this.wrapped.has(key))this.wrapped.set(key,layoutPage(ctx,item.detail,SCREEN_W-68,{
-   accent:this.p5?P5_RED:this.bo2?BO2_ORANGE:BRIGHT, headFont:this.p5?`13px ${P5_FONT}`:`bold 9px ${FONT}`, headH:this.p5?17:12}));
-  const page=this.wrapped.get(key), view=BODY_BOTTOM-BODY_TOP+(links.length?0:20), total=page.height;
+   accent:editorial&&this.p5?ink:accent, headFont:editorial?`600 7px ${this.p5?P5_FONT:EDITORIAL_FONT}`:this.p5?`13px ${P5_FONT}`:`bold 9px ${FONT}`, headH:editorial?10:this.p5?17:12,
+   ...(editorial?{editorial:true,fontFamily:EDITORIAL_FONT,bodySize:9,bodyLineH:12,ink,muted,headingTracking:.55,headingRule:false,listMarker:'bar',listGap:10,listColor:ink,...item.detail.bodyStyle}:{})}));
+  const headerLinks=editorial||item.detail.linksPosition==='header';
+  const page=this.wrapped.get(key), view=editorial?240-bodyTop:BODY_BOTTOM-BODY_TOP+(links.length&&!headerLinks?0:20), total=page.height;
   this.maxScroll=Math.ceil(Math.max(0,total-view)/SCROLL_STEP);
-  ctx.save();ctx.beginPath();ctx.rect(0,BODY_TOP,SCREEN_W,view);ctx.clip();
-  this.shadow(2);ctx.textBaseline='top';ctx.textAlign='left';
-  this.drawPage(page.ops,30,BODY_TOP+4-this.shown.scroll*SCROLL_STEP,BODY_TOP,BODY_TOP+view);
+  ctx.save();ctx.beginPath();ctx.rect(0,bodyTop,SCREEN_W,view);ctx.clip();
+  if(editorial)this.noShadow();else this.shadow(2);ctx.textBaseline='top';ctx.textAlign='left';
+  this.drawPage(page.ops,30,bodyTop+(editorial?0:4)-this.shown.scroll*SCROLL_STEP,bodyTop,bodyTop+view);
   ctx.restore();this.noShadow();
   if(this.maxScroll>0){
    const track=view-8, thumb=Math.max(16,track*view/total), progress=Math.min(1,this.shown.scroll/this.maxScroll);
-   ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(SCREEN_W-24,BODY_TOP+4,2,track);
-   ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillRect(SCREEN_W-24,BODY_TOP+4+(track-thumb)*progress,2,thumb);
+   ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(SCREEN_W-24,bodyTop+4,2,track);
+   ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillRect(SCREEN_W-24,bodyTop+4+(track-thumb)*progress,2,thumb);
   }
   ctx.textBaseline='middle';ctx.font=`10px ${FONT}`;
-  let x=30;const y=238;
+  const linkWidth=link=>ctx.measureText(link.label).width+30+(link.trailingIcon?14:0);
+  const actionsRight=editorial?442:SCREEN_W-28; // Match the editorial divider and body width.
+  let x=headerLinks?actionsRight-links.reduce((sum,link)=>sum+linkWidth(link)+8,0)+8:30;
+  const y=actionY;
   links.forEach((link,i)=>{
-   const width=ctx.measureText(link.label).width+30, selected=i===state.link;
+   const width=linkWidth(link), selected=i===state.link;
    if(interactive&&this.hovering(x,y-12,width,24))this.glow(x+width/2,y,width*.7);
-   if(selected)this.pulses.push({link:true,text:link.label,icon:link.icon,x,y,width,alpha:ctx.globalAlpha});
+   if(selected)this.pulses.push({link:true,text:link.label,icon:link.icon,trailingIcon:link.trailingIcon,x,y,width,alpha:ctx.globalAlpha});
    else{
     ctx.beginPath();ctx.roundRect(x,y-10,width,20,10);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=.8;ctx.stroke();
     ctx.strokeStyle=ctx.fillStyle=TEXT;drawIcon(ctx,link.icon??'link',x+12,y,10);
     ctx.textAlign='left';ctx.fillText(link.label,x+21,y+.5);
+    if(link.trailingIcon)drawIcon(ctx,link.trailingIcon,x+width-11,y,8);
    }
    if(interactive)this.hits.push({x,y:y-12,w:width,h:24,action:{type:'CONFIRM',link:i}});
    x+=width+8;
@@ -572,12 +666,12 @@ export class XmbRenderer{
     continue;
    }
    if(op.image){this.pageImage(op,x+op.x,at);continue;}
-   if(op.rule){ctx.fillStyle=op.color;ctx.globalAlpha*=.7;ctx.fillRect(x+op.x,at,op.w,1);ctx.globalAlpha/=.7;}
+   if(op.rule){ctx.fillStyle=op.color;ctx.globalAlpha*=.7;ctx.fillRect(x+op.x,at,op.w,op.h??1);ctx.globalAlpha/=.7;}
    else if(op.dot){
     ctx.beginPath();ctx.arc(x+op.x,at,op.r,0,Math.PI*2);
     if(op.ring){ctx.strokeStyle=op.color;ctx.lineWidth=1.1;ctx.stroke();}else{ctx.fillStyle=op.color;ctx.fill();}
    }
-   else{ctx.font=op.font;ctx.fillStyle=op.color;ctx.fillText(op.text,x+op.x,at);}
+   else{ctx.font=op.font;ctx.fillStyle=op.color;ctx.letterSpacing=`${op.tracking??0}px`;ctx.fillText(op.text,x+op.x,at);ctx.letterSpacing='0px';}
   }
  }
  // An image box on a detail page: contain fits the whole picture (a logo, pushed to its float's side), cover fills the
@@ -649,16 +743,7 @@ export class XmbRenderer{
   const big=size=>this.p5?`${size+4}px ${P5_FONT}`:`bold ${size}px ${FONT}`;
   this.shadow(2);
   if(game.status==='title'){
-   centre('Press the buttons shown, in order.',104,`11px ${FONT}`);
-   const step=40, x0=SCREEN_W/2-step*(LEGEND.length-1)/2;
-   LEGEND.forEach(([button,key],i)=>{
-    const x=x0+i*step;
-    ctx.beginPath();ctx.roundRect(x-13,147,26,26,6);ctx.fillStyle='rgba(0,0,0,.4)';ctx.fill();
-    ctx.lineWidth=.8;ctx.strokeStyle='rgba(255,255,255,.4)';ctx.stroke();
-    this.glyph(button,x,160,7);
-    ctx.font=`8.5px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.fillText(key,x,186);
-   });
-   centre('Click the PSP\'s buttons or use the keys',208,`8.5px ${FONT}`,'rgba(255,255,255,.6)');
+   this.controlsGuide();
   }
   else if(game.status==='ready'||game.status==='play'){
    const left=game.status==='play'?Math.max(0,game.endsAt-now):round.time, hurry=left<HURRY;
@@ -687,6 +772,70 @@ export class XmbRenderer{
   ctx.globalAlpha=alpha;
   this.hint({title:'✕ Start   ○ Back',lost:'✕ Retry   ○ Back',won:'✕ Play again   ○ Back'}[game.status]??'Home  Quit',interactive);
   ctx.globalAlpha=1;
+ }
+ // Keyboard clusters mirror the physical PSP controls. Drawn in logical screen units so the guide
+ // stays crisp on the screen texture and shares the active skin without downloading an image.
+ controlsGuide(){
+  const ctx=this.ctx;
+  ctx.save();this.noShadow();
+  const accent=this.p5?P5_RED:this.bo2?BO2_ORANGE:this.gta?'#ec6fae':themeColors(this.state.theme)[0];
+  const edge=this.p5?BRIGHT:this.bo2?BO2_ORANGE:this.gta?'#76d9ec':'#b4cce2';
+  const angular=this.p5||this.bo2;
+  const box=(x,y,w,h,r=5)=>{
+   ctx.beginPath();
+   if(angular){
+    const cut=this.p5?5:3;
+    ctx.moveTo(x+cut,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+h-cut);
+    ctx.lineTo(x+w-cut,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+cut);ctx.closePath();
+   }else ctx.roundRect(x,y,w,h,r);
+  };
+  const label=(text,x,y,size=9,color=BRIGHT)=>{
+   ctx.font=this.p5?`${size+2}px ${P5_FONT}`:`bold ${size}px ${FONT}`;
+   ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+  };
+  label('MATCH THE SEQUENCE. BEAT THE CLOCK.',240,71,9);
+  box(24,86,432,126,12);ctx.fillStyle=this.p5?'rgba(0,0,0,.85)':'rgba(8,13,22,.68)';ctx.fill();
+  ctx.lineWidth=this.p5?1.5:.8;ctx.strokeStyle=edge;ctx.stroke();
+  // A small inset title breaks the top rule, like a console's control diagram.
+  box(196,80,88,15,3);ctx.fillStyle=accent;ctx.fill();label('CONTROLS',240,88,8.5);
+  ctx.fillStyle=this.gta?'#ec6fae':accent;ctx.fillRect(239.5,104,1,91);
+  const key=(text,x,y)=>{
+   box(x-10,y-10,20,20,4);
+   const fill=ctx.createLinearGradient(x,y-10,x,y+10);
+   fill.addColorStop(0,this.p5?'#3b1115':'#283444');fill.addColorStop(1,'#0b1019');
+   ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=1;ctx.stroke();
+   label(text,x,y+.5,12);
+  };
+  // Inverted-T keyboard arrangements, with the same top / left / bottom / right mapping as the PSP.
+  const keyboard=(x,letters)=>{
+   key(letters[0],x,124);
+   letters.slice(1).forEach((letter,i)=>key(letter,x+(i-1)*23,147));
+  };
+  keyboard(76,['W','A','S','D']);keyboard(292,['I','J','K','L']);
+  label('=',122,139,16,edge);label('=',338,139,16,edge);
+  // One continuous D-pad outline, with four directional arrows.
+  const x=180,y=139,arm=12,reach=28;
+  ctx.beginPath();ctx.moveTo(x-arm,y-reach);ctx.lineTo(x+arm,y-reach);
+  ctx.lineTo(x+arm,y-arm);ctx.lineTo(x+reach,y-arm);ctx.lineTo(x+reach,y+arm);
+  ctx.lineTo(x+arm,y+arm);ctx.lineTo(x+arm,y+reach);ctx.lineTo(x-arm,y+reach);
+  ctx.lineTo(x-arm,y+arm);ctx.lineTo(x-reach,y+arm);ctx.lineTo(x-reach,y-arm);
+  ctx.lineTo(x-arm,y-arm);ctx.closePath();
+  ctx.fillStyle='#111b28';ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=1.2;ctx.stroke();
+  [['up',0,-18],['left',-18,0],['down',0,18],['right',18,0]].forEach(([button,dx,dy])=>this.glyph(button,x+dx,y+dy,5));
+  // The face buttons keep their recognisable colours in every skin, as in the live game.
+  [['triangle',0,-22],['square',-22,0],['cross',0,22],['circle',22,0]].forEach(([button,dx,dy])=>{
+   const x=396+dx,y=139+dy;
+   ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fillStyle='#101824';ctx.fill();
+   ctx.strokeStyle=edge;ctx.lineWidth=.9;ctx.stroke();this.glyph(button,x,y,6);
+  });
+  const badge=(text,x)=>{
+   box(x-48,184,96,17,4);ctx.fillStyle=accent;ctx.globalAlpha*=.25;ctx.fill();
+   ctx.globalAlpha/= .25;ctx.strokeStyle=edge;ctx.lineWidth=.7;ctx.stroke();label(text,x,192.5,8);
+  };
+  badge('DIRECTION',132);badge('FACE BUTTONS',348);
+  ctx.font=`8px ${FONT}`;ctx.fillStyle=TEXT;ctx.textAlign='center';
+  ctx.fillText('Arrow keys also work · X / O = K / L · Or click the PSP buttons',240,228);
+  ctx.restore();
  }
  // A row of sequence tiles centred on y: done ones dimmed, the next one lit and a little larger. hit (0→1) is how far
  // the last right button's pop has played: its tile swells and fades back, and a ring in its colour spreads out.

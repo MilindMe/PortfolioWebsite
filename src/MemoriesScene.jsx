@@ -11,7 +11,6 @@ import {createButtonGlow} from './xmb/buttonGlow';
 import {PHONE, ROTATION_LOCKED, stageInsets} from './layout';
 import {MODEL_URL, loadModelBytes} from './modelAsset';
 import {DURATION, REST, SKIN_AT, easeInOut, pose, transitionKind} from './experiences/transitions';
-import {experiences} from './xmb/themes';
 
 // Built by `npm run model:optimize` (meshopt geometry, KTX2 textures). Vite bundles the Basis transcoder that
 // KTX2Loader finds by itself; it is only fetched when the model actually has KTX2 textures.
@@ -22,12 +21,11 @@ const PHONE_FILL={w:.96,h:.84};
 // Page wheel: 40px of scrolling is one step, a pause resets the count and steps are spaced so trackpad momentum
 // doesn't race through the menu.
 const WHEEL_STEP=40, WHEEL_RESET=200, WHEEL_GAP=140;
-// focus 'read' (a page worth reading is open) makes a wheel experience give up its strip, and the PSP glides back to
-// the big Classic framing over GLIDE ms. focus 'game' (Button Rush) does the same in every experience, but lets the PSP
-// fill the page.
+// Reading pages and Button Rush hide the wheel and glide to the same enlarged framing
+// over GLIDE ms in every experience.
 const GLIDE=650;
-const FOCUS_FILL={read:experiences.classic.fill,game:{w:.94,h:.86}};
-const framing=(experience,focus)=>focus?{...experience,wheel:false,fill:FOCUS_FILL[focus]}:experience;
+const FOCUS_FILL={w:.94,h:.86};
+const framing=(experience,focus)=>focus?{...experience,wheel:false,fill:FOCUS_FILL}:experience;
 
 // children are page layers drawn behind the PSP (e.g. an experience's backdrop); the WebGL canvas sits above them.
 export default function MemoriesScene({lightMode='golden',reset,xmbState,experience,focus=false,onXmbAction,onStatus,onProgress,children}) {

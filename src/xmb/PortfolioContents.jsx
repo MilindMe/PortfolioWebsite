@@ -7,9 +7,10 @@ const HIDDEN_TROPHY='Hidden Trophy';
 const linkProps=url=>url===RESUME_URL?{download:RESUME_FILE}:{target:'_blank',rel:'noopener'};
 
 function DetailBody({detail}){
- if(!detail.blocks)return <p>{detail.body}</p>;
- return detail.blocks.map((block,i)=>block.type==='h'?<h4 key={i}>{block.text}</h4>
+ if(!detail.blocks)return <>{detail.intro&&<p>{detail.intro}</p>}<p>{detail.body}</p></>;
+ return <>{detail.intro&&<p>{detail.intro}</p>}{detail.blocks.map((block,i)=>block.type==='h'?<h4 key={i}>{block.text}</h4>
   :block.type==='list'?<ul key={i}>{block.items.map(item=><li key={item}>{item}</li>)}</ul>
+  :block.type==='columns'?<div key={i}>{block.items.map((column,j)=><section key={j}><DetailBody detail={column}/></section>)}</div>
   :block.type==='timeline'?<ol key={i}>{block.entries.map(entry=><li key={entry.when+entry.role}>
    <strong>{entry.role}</strong>{entry.org?`, ${entry.org}`:''} <time>{entry.when}</time>
    {entry.points&&<ul>{entry.points.map(point=><li key={point}>{point}</li>)}</ul>}
@@ -19,7 +20,7 @@ function DetailBody({detail}){
   :block.type==='grid'?<ul key={i}>{block.items.map(item=><li key={item.title}>
    {item.alt&&<span role="img" aria-label={item.alt}/>}<strong>{item.title}</strong>{item.text?` — ${item.text}`:''}
   </li>)}</ul>
-  :<p key={i}>{block.text}</p>);
+  :<p key={i}>{block.text}</p>)}</>;
 }
 
 // Menu state changes do not require re-rendering the static content.

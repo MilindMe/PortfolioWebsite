@@ -123,8 +123,8 @@ test('OPEN opens an item\'s page from anywhere once a theme is picked',()=>{
  assert.equal(xmbReducer(locked,{type:'OPEN',cat:START,item:bio}),locked);
 });
 
-test('About me and Experience are reading pages; menus and locked states are not',()=>{
- for(const id of ['bio','experience']){
+test('All About screens are reading pages; menus and locked states are not',()=>{
+ for(const id of ['bio','experience','skills','education']){
   const item=categories[START].items.findIndex(entry=>entry.id===id);
   assert.equal(readingFocus({...menu(START,item),view:'detail'}),true,id);
   assert.equal(readingFocus(menu(START,item)),false,id);
