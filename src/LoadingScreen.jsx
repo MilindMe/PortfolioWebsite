@@ -21,6 +21,7 @@ const ribbon=BANDS.map(band);
 export default function LoadingScreen({progress}) {
  const amount=Math.round(Math.min(1,Math.max(0,progress))*100);
  return <div className="loading-screen" role="progressbar" aria-label="Loading the PSP scene" aria-valuemin={0} aria-valuemax={100} aria-valuenow={amount}>
+  <span className="site-name loading-name">Milind Meetarbhan</span>
   <div className="loading-ribbon" aria-hidden="true">
    {ribbon.map(({edge,fill},i)=><svg key={i} viewBox={`0 0 ${PERIOD*2} 300`} preserveAspectRatio="none" style={{'--loop':`${Math.abs(BANDS[i][4])}s`,'--dir':BANDS[i][4]<0?'reverse':'normal'}}>
     <path className="band" d={fill} style={{opacity:BANDS[i][3]}}/>
@@ -29,7 +30,6 @@ export default function LoadingScreen({progress}) {
   </div>
   <div className="loading-body">
    <p className="loading-title">Loading<span className="loading-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>
-   <p className="loading-note">Desktop is recommended for a better experience!</p>
   </div>
  </div>;
 }
